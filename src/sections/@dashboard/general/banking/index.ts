@@ -1,4 +1,4 @@
-export { default as BankingContacts } from './BankingContacts';
+export { default as BankingLatestUploads } from './BankingLatestUploads';
 export { default as BankingQuickTransfer } from './BankingQuickTransfer';
 export { default as BankingInviteFriends } from './BankingInviteFriends';
 export { default as BankingWidgetSummary } from './BankingWidgetSummary';

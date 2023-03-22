@@ -141,9 +141,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       email,
       password,
     });
-    const { accessToken, user } = response.data;
+    const { token, user } = response.data;
 
-    setSession(accessToken);
+    setSession(token);
 
     dispatch({
       type: Types.LOGIN,
