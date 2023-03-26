@@ -3,7 +3,7 @@ import { createContext, useEffect, useReducer, useCallback, useMemo } from 'reac
 import axios from '../utils/axios';
 import localStorageAvailable from '../utils/localStorageAvailable';
 //
-import { isValidToken, setSession } from './utils';
+import { setSession } from './utils';
 import { ActionMapType, AuthStateType, AuthUserType, JWTContextType } from './types';
 
 // ----------------------------------------------------------------------
@@ -96,10 +96,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const accessToken = storageAvailable ? localStorage.getItem('accessToken') : '';
 
-      if (accessToken && isValidToken(accessToken)) {
+      if (accessToken) {
         setSession(accessToken);
 
-        const response = await axios.get('/api/account/my-account');
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/my-account`);
 
         const { user } = response.data;
 

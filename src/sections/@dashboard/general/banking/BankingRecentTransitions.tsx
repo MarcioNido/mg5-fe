@@ -28,25 +28,22 @@ import Iconify, { IconifyProps } from '../../../../components/iconify';
 import Scrollbar from '../../../../components/scrollbar';
 import MenuPopover from '../../../../components/menu-popover';
 import { TableHeadCustom } from '../../../../components/table';
+import {TransactionInterface} from "../../../../common/types/transactions";
 
 // ----------------------------------------------------------------------
 
 type RowProps = {
-  id: string;
-  name: string | null;
-  avatar: string | null;
-  type: string;
-  message: string;
-  category: string;
-  date: number;
-  status: string;
+  id: number;
+  accountNumber: string;
+  description: string;
+  transactionDate: Date;
   amount: number;
 };
 
 interface Props extends CardProps {
   title?: string;
   subheader?: string;
-  tableData: RowProps[];
+  tableData: TransactionInterface[];
   tableLabels: any;
 }
 
@@ -135,73 +132,19 @@ function BankingRecentTransitionsRow({ row }: BankingRecentTransitionsRowProps) 
     <>
       <TableRow>
         <TableCell>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box sx={{ position: 'relative' }}>
-              {renderAvatar(row.category, row.avatar)}
-              <Box
-                sx={{
-                  right: 0,
-                  bottom: 0,
-                  width: 18,
-                  height: 18,
-                  display: 'flex',
-                  borderRadius: '50%',
-                  position: 'absolute',
-                  alignItems: 'center',
-                  color: 'common.white',
-                  bgcolor: 'error.main',
-                  justifyContent: 'center',
-                  ...(row.type === 'Income' && {
-                    bgcolor: 'success.main',
-                  }),
-                }}
-              >
-                <Iconify
-                  icon={
-                    row.type === 'Income'
-                      ? 'eva:diagonal-arrow-left-down-fill'
-                      : 'eva:diagonal-arrow-right-up-fill'
-                  }
-                  width={16}
-                />
-              </Box>
-            </Box>
-            <Box sx={{ ml: 2 }}>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                {row.message}
-              </Typography>
-              <Typography variant="subtitle2"> {row.category}</Typography>
-            </Box>
-          </Box>
+
+            <Typography variant="subtitle2">
+              {row.accountNumber}
+            </Typography>
+            <Typography variant="body2"> {row.description}</Typography>
+
         </TableCell>
 
         <TableCell>
-          <Typography variant="subtitle2">{format(new Date(row.date), 'dd MMM yyyy')}</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {format(new Date(row.date), 'p')}
-          </Typography>
+          <Typography variant="subtitle2">{format(new Date(row.transactionDate), 'dd MMM yyyy')}</Typography>
         </TableCell>
 
-        <TableCell>{fCurrency(row.amount)}</TableCell>
-
-        <TableCell>
-          <Label
-            variant={isLight ? 'soft' : 'filled'}
-            color={
-              (row.status === 'completed' && 'success') ||
-              (row.status === 'in_progress' && 'warning') ||
-              'error'
-            }
-          >
-            {sentenceCase(row.status)}
-          </Label>
-        </TableCell>
-
-        <TableCell align="right">
-          <IconButton color={openPopover ? 'inherit' : 'default'} onClick={handleOpenPopover}>
-            <Iconify icon="eva:more-vertical-fill" />
-          </IconButton>
-        </TableCell>
+        <TableCell align='right'>{fCurrency(row.amount)}</TableCell>
       </TableRow>
 
       <MenuPopover

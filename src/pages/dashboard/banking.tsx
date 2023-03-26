@@ -4,7 +4,7 @@ import Head from 'next/head';
 import {useTheme} from '@mui/material/styles';
 import {Grid, Container, Stack, Typography, Box} from '@mui/material';
 // layouts
-import {useCallback, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import DashboardLayout from '../../layouts/dashboard';
 // _mock_
 import {
@@ -26,6 +26,8 @@ import {
 import {UploadBox} from "../../components/upload";
 import Iconify from "../../components/iconify";
 import {FileApi} from "../../common/apis/FileApi";
+import {TransactionInterface} from "../../common/types/transactions";
+import {TransactionsApi} from "../../common/apis/TransactionsApi";
 
 
 // ----------------------------------------------------------------------
@@ -37,32 +39,39 @@ GeneralBankingPage.getLayout = (page: React.ReactElement) => (
 // ----------------------------------------------------------------------
 export default function GeneralBankingPage() {
     const theme = useTheme();
-
-    const [file, setFile] = useState<(File | string)>();
     const [latestUploads, setLatestUploads] = useState([]);
+    const [latestTransactions, setLatestTransactions] = useState<TransactionInterface[]>([]);
 
     const {themeStretch} = useSettingsContext();
+
+    const fetchLatestUploads = useCallback(() => {
+        FileApi.getAll().then(data => {
+            setLatestUploads(data);
+        })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [latestUploads]);
+
+    const fetchTransactionData = useCallback(async () => {
+        const transactionData = await TransactionsApi.getAll();
+        setLatestTransactions(transactionData);
+    }, []);
 
     const handleDrop = useCallback(
         (acceptedFiles: File[]) => {
             const currentFile = Object.assign(acceptedFiles[0]);
 
-            FileApi.store(currentFile).then(response => console.log(response));
-
-            setFile(currentFile);
-            console.log(file);
+            FileApi.store(currentFile)
+                .then(() => fetchLatestUploads())
+                .catch(error => console.log(error));
         },
-        [file]
+        [fetchLatestUploads]
     );
 
-    const fetchLatestUploads = useCallback(() => {
-        FileApi.getAll().then(data => {
-            setLatestUploads(data);
-            console.log(data);
-        })
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, latestUploads);
 
+    useEffect(() => {
+        fetchTransactionData()
+            .catch(console.error)
+    }, [fetchTransactionData]);
 
     return (
         <>
@@ -164,13 +173,12 @@ export default function GeneralBankingPage() {
                             />
 
                             <BankingRecentTransitions
-                                title="Recent Transitions"
-                                tableData={_bankingRecentTransitions}
+                                title="Recent Transactions"
+                                tableData={latestTransactions}
                                 tableLabels={[
-                                    {id: 'description', label: 'Description'},
+                                    {id: 'account', label: 'Description'},
                                     {id: 'date', label: 'Date'},
-                                    {id: 'amount', label: 'Amount'},
-                                    {id: 'status', label: 'Status'},
+                                    {id: 'amount', label: 'Amount', align: 'right'},
                                     {id: ''},
                                 ]}
                             />
