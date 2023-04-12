@@ -27,7 +27,7 @@ import {UploadBox} from "../../components/upload";
 import Iconify from "../../components/iconify";
 import {FileApi} from "../../common/apis/FileApi";
 import {TransactionInterface} from "../../common/types/transactions";
-import {TransactionsApi} from "../../common/apis/TransactionsApi";
+import {Transaction} from "../../common/apis/Transaction";
 
 
 // ----------------------------------------------------------------------
@@ -52,7 +52,7 @@ export default function GeneralBankingPage() {
     }, [latestUploads]);
 
     const fetchTransactionData = useCallback(async () => {
-        const transactionData = await TransactionsApi.getAll();
+        const transactionData = await Transaction.getAll();
         setLatestTransactions(transactionData);
     }, []);
 

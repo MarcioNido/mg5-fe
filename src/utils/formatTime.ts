@@ -16,6 +16,13 @@ export function fDateTime(date: InputValue, newFormat?: string) {
   return date ? format(new Date(date), fm) : '';
 }
 
+export function fDateISOString(date: string | Date | null) {
+    if (date instanceof Date) {
+        return date.toISOString().substring(0, 10);
+    }
+    return date;
+}
+
 export function fTimestamp(date: InputValue) {
   return date ? getTime(new Date(date)) : '';
 }
