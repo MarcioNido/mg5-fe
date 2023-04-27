@@ -5,7 +5,7 @@ import {
 
 import {useState} from "react";
 import {useRouter} from "next/router";
-import {ITransaction} from "../types";
+import {TransactionResource} from "../types";
 import {fDate} from "../../../utils/formatTime";
 import Iconify from "../../../components/iconify";
 import MenuPopover from "../../../components/menu-popover";
@@ -14,7 +14,7 @@ import MenuPopover from "../../../components/menu-popover";
 // ----------------------------------------------------------------------
 
 type Props = {
-  row: ITransaction;
+  row: TransactionResource;
 };
 
 export default function TransactionsListTableRow({

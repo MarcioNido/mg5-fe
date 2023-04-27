@@ -6,8 +6,9 @@ import Iconify from '../iconify';
 export type TableFilterBarProps = {
   config: {
     column: string;
-    type: 'select' | 'text' | 'date';
-    options?: string[] | null;
+    label: string;
+    type: 'select' | 'text' | 'date' | 'month';
+    options?: {value: string | number; label: string | number}[] | null;
     defaultValue: string | Date | number | null;
     value: string | Date | number | null;
     onFilterEvent: React.EventHandler<any>;
@@ -16,6 +17,7 @@ export type TableFilterBarProps = {
 };
 
 const INPUT_WIDTH = 160;
+const MONTH_INPUT_WIDTH = 200;
 
 export function TableFilterBar({ config }: TableFilterBarProps) {
   const [isFiltered, setIsFiltered] = useState<boolean>(false);
@@ -42,13 +44,13 @@ export function TableFilterBar({ config }: TableFilterBarProps) {
         }}
         sx={{ px: 2.5, py: 3 }}
       >
-        {config.map(({ column, type, value, options, onFilterEvent }) => {
+        {config.map(({ column, label, type, value, options, onFilterEvent }) => {
           if (type === 'select') {
             return (
               <TextField
                 fullWidth
                 select
-                label="Portal"
+                label={label}
                 value={value}
                 onChange={onFilterEvent}
                 SelectProps={{
@@ -68,8 +70,8 @@ export function TableFilterBar({ config }: TableFilterBarProps) {
                 {options &&
                   options.map((option) => (
                     <MenuItem
-                      key={option}
-                      value={option}
+                      // key={option.key}
+                      value={option.value}
                       sx={{
                         mx: 1,
                         borderRadius: 0.75,
@@ -77,7 +79,7 @@ export function TableFilterBar({ config }: TableFilterBarProps) {
                         textTransform: 'capitalize',
                       }}
                     >
-                      {option}
+                      {option.label}
                     </MenuItem>
                   ))}
               </TextField>
@@ -87,7 +89,7 @@ export function TableFilterBar({ config }: TableFilterBarProps) {
           if (type === 'date') {
             return (
               <DatePicker
-                label="Data Carga"
+                label={label}
                 value={value}
                 onChange={onFilterEvent}
                 renderInput={(params) => (
@@ -100,6 +102,26 @@ export function TableFilterBar({ config }: TableFilterBarProps) {
                   />
                 )}
               />
+            );
+          }
+
+          if (type === 'month') {
+            return (
+                <DatePicker
+                    label={label}
+                    value={value}
+                    views={['month', 'year']}
+                    onChange={onFilterEvent}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            fullWidth
+                            sx={{
+                              maxWidth: { md: MONTH_INPUT_WIDTH },
+                            }}
+                        />
+                    )}
+                />
             );
           }
 

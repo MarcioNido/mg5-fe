@@ -69,9 +69,7 @@ export default function TransactionsListPage() {
             </Container>
             <Grid container spacing={3}>
                 <Grid item xs={12}>
-                    <Card>
-                        <TransactionsListTable />
-                    </Card>
+                    <TransactionsListTable />
                 </Grid>
             </Grid>
         </>

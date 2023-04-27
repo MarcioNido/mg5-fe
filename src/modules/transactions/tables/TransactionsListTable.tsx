@@ -2,16 +2,19 @@ import {useCallback, useEffect, useState} from "react";
 import {TableHeadCustom, TableNoData, TablePaginationCustom, useTable} from "components/table";
 import {useSnackbar} from "notistack";
 import {useTheme} from "@mui/material/styles";
-import {ICollectionMetadata} from "common/types";
+import {BalanceResource, ICollectionMetadata} from "common/types";
 import useFilter from "components/table/useFilter";
 import {Transaction} from "common/apis/Transaction";
-import {fDateISOString} from "utils/formatTime";
-import {Table, TableBody, TableContainer} from "@mui/material";
+import {fDateISOString, fMonth} from "utils/formatTime";
+import {Box, Card, Divider, Stack, Table, TableBody, TableContainer, Typography} from "@mui/material";
 import {TableFilterBar, TableFilterBarProps} from "components/table/TableFilterBar";
 import CustomBackdrop from "components/custom-backdrop/CustomBackdrop";
 import Scrollbar from "components/scrollbar";
-import {ITransaction} from "../types";
+import {TransactionResource} from "../types";
 import TransactionsListTableRow from "./TransactionsListTableRow";
+import {fCurrency, fShortenNumber} from "../../../utils/formatNumber";
+import TransactionsListTableBalance from "./TransactionsListTableBalance";
+import {Balance} from "../../../common/apis/Balance";
 
 const TABLE_HEAD = [
     { id: 'accountNumber', label: 'Account', align: 'left' },
@@ -22,18 +25,42 @@ const TABLE_HEAD = [
 ];
 
 export default function TransactionsListTable() {
-    const [tableData, setTableData] = useState<ITransaction[]>();
+    const [tableData, setTableData] = useState<TransactionResource[]>();
     const [tableMetadata, setTableMetadata] = useState<ICollectionMetadata>();
+    const [balanceData, setBalanceData] = useState<BalanceResource>();
     const [isLoading, setIsLoading] = useState(false);
     const { dense, onChangeDense, page, onChangePage, rowsPerPage, onChangeRowsPerPage } = useTable();
     const { enqueueSnackbar } = useSnackbar();
     const theme = useTheme();
 
     // FILTERS
-    const AccountFilterOptions = ['Marcio RBC Chequing', 'Marcio RBC Savings', 'Marcio Visa RBC'];
+    const AccountFilterOptions = [
+        {value: '06402-5031752', label: 'Marcio RBC Chequing'},
+        {value: 2, label: 'Marcio RBC Savings'},
+        {value: 3, label: 'Marcio Visa RBC'}
+    ];
+
     const { filterValue: filterAccountNumber, handleFilterChange: handleFilterAccountNumberChange } = useFilter('');
-    const { filterValue: filterTransactionDate, handleFilterChange: handleFilterTransactionDateChange } =
+    const { filterValue: filterMonth, handleFilterChange: handleFilterMonthChange } =
         useFilter(null);
+
+    const fetchBalance = useCallback(() => {
+        setIsLoading(true);
+        setBalanceData(undefined);
+        if (filterAccountNumber && filterMonth) {
+            Balance.get(filterAccountNumber, fMonth(filterMonth))
+                .then((data) => {
+                    setBalanceData(data.data);
+                    setIsLoading(false);
+                })
+                .catch((error) => {
+                    enqueueSnackbar(error.response.data.message, { variant: 'error' })
+                    setIsLoading(false);
+                })
+        }
+
+
+    }, [enqueueSnackbar, filterAccountNumber, filterMonth])
 
     const fetchPage = useCallback(() => {
         setIsLoading(true);
@@ -42,7 +69,7 @@ export default function TransactionsListTable() {
             page_size: rowsPerPage,
             filters: [
                 { column: 'account_number', value: filterAccountNumber },
-                { column: 'transaction_date', value: fDateISOString(filterTransactionDate) },
+                { column: 'month', value: (fMonth(filterMonth)) },
             ],
         })
             .then((data) => {
@@ -54,16 +81,21 @@ export default function TransactionsListTable() {
                 enqueueSnackbar(error.response.data.message, { variant: 'error' });
                 setIsLoading(false);
             });
-    }, [enqueueSnackbar, filterTransactionDate, filterAccountNumber, page, rowsPerPage]);
+    }, [enqueueSnackbar, filterMonth, filterAccountNumber, page, rowsPerPage]);
 
     useEffect(() => {
         fetchPage();
     }, [fetchPage]);
 
+    useEffect(() => {
+        fetchBalance();
+    }, [fetchBalance])
+
     const filtersConfig: TableFilterBarProps = {
         config: [
             {
                 column: 'accountNumber',
+                label: 'Account',
                 type: 'select',
                 options: AccountFilterOptions,
                 defaultValue: '',
@@ -71,19 +103,31 @@ export default function TransactionsListTable() {
                 onFilterEvent: handleFilterAccountNumberChange,
             },
             {
-                column: 'transactionDate',
-                type: 'date',
+                column: 'month',
+                label: 'Data',
+                type: 'month',
                 defaultValue: null,
-                value: filterTransactionDate,
-                onFilterEvent: handleFilterTransactionDateChange,
+                value: filterMonth,
+                onFilterEvent: handleFilterMonthChange,
             },
         ],
-        isFiltered: !!(filterAccountNumber || filterTransactionDate),
+        isFiltered: !!(filterAccountNumber || filterMonth),
     };
 
     return (
         <>
+            <Card sx={{ mb: 2 }}>
+                <TransactionsListTableBalance
+                    initialBalance={balanceData?.initialBalance ?? 0}
+                    totalCredits={balanceData?.totalCredits ?? 0}
+                    totalDebits={balanceData?.totalDebits ?? 0}
+                    finalBalance={balanceData?.finalBalance ?? 0}
+                />
+            </Card>
+
+            <Card>
             <TableFilterBar config={filtersConfig.config} isFiltered={filtersConfig.isFiltered} />
+
             <TableContainer>
                 <CustomBackdrop open={isLoading} theme={theme} />
                 <Scrollbar>
@@ -91,7 +135,7 @@ export default function TransactionsListTable() {
                         <TableHeadCustom headLabel={TABLE_HEAD} />
                         <TableBody>
                             {tableData ? (
-                                tableData?.map((row: ITransaction) => <TransactionsListTableRow row={row} />)
+                                tableData?.map((row: TransactionResource) => <TransactionsListTableRow row={row} />)
                             ) : (
                                 <TableNoData isNotFound={false} />
                             )}
@@ -109,6 +153,7 @@ export default function TransactionsListTable() {
                 dense={dense}
                 onChangeDense={onChangeDense}
             />
+            </Card>
         </>
     );
 

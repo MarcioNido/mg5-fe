@@ -4,10 +4,28 @@ import { format, getTime, formatDistanceToNow } from 'date-fns';
 
 type InputValue = Date | string | number | null;
 
-export function fDate(date: InputValue, newFormat?: string) {
-  const fm = newFormat || 'dd MMM yyyy';
+export function fDate(
+    date: InputValue,
+    newFormat?: 'full' | 'long' | 'medium' | 'short' | undefined
+) {
+    if (!date) return '';
 
-  return date ? format(new Date(date), fm) : '';
+    const fmt = newFormat || 'short';
+    const dateObj = new Date(date);
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: fmt,
+        timeZone: 'UTC',
+    }).format(dateObj);
+}
+
+export function fMonth(
+    date: InputValue
+) {
+    if (date instanceof Date) {
+        return date.toISOString().substring(0, 7);
+    }
+    return date;
 }
 
 export function fDateTime(date: InputValue, newFormat?: string) {

@@ -1,4 +1,4 @@
-export type ITransaction = {
+export type TransactionResource = {
     id: number;
     accountNumber: string;
     transactionDate: Date;
