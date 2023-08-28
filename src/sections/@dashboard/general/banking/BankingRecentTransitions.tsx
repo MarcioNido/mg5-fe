@@ -34,9 +34,9 @@ import {TransactionInterface} from "../../../../common/types/transactions";
 
 type RowProps = {
   id: number;
-  accountNumber: string;
+  account_number: string;
   description: string;
-  transactionDate: Date;
+  transaction_date: Date;
   amount: number;
 };
 
@@ -134,14 +134,14 @@ function BankingRecentTransitionsRow({ row }: BankingRecentTransitionsRowProps) 
         <TableCell>
 
             <Typography variant="subtitle2">
-              {row.accountNumber}
+              {row.account_number}
             </Typography>
             <Typography variant="body2"> {row.description}</Typography>
 
         </TableCell>
 
         <TableCell>
-          <Typography variant="subtitle2">{format(new Date(row.transactionDate), 'dd MMM yyyy')}</Typography>
+          <Typography variant="subtitle2">{format(new Date(row.transaction_date), 'dd MMM yyyy')}</Typography>
         </TableCell>
 
         <TableCell align='right'>{fCurrency(row.amount)}</TableCell>

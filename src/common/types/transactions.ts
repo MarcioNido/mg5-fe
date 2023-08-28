@@ -1,7 +1,7 @@
 export interface TransactionInterface {
     id: number,
-    accountNumber: string,
+    account_number: string,
     description: string,
-    transactionDate: Date,
+    transaction_date: Date,
     amount: number
 }

@@ -48,6 +48,7 @@ export const PATH_DASHBOARD = {
     banking: path(ROOTS_DASHBOARD, '/banking'),
     booking: path(ROOTS_DASHBOARD, '/booking'),
     file: path(ROOTS_DASHBOARD, '/file'),
+    transactions: path(ROOTS_DASHBOARD, '/transactions/list'),
   },
   mail: {
     root: path(ROOTS_DASHBOARD, '/mail'),
@@ -83,6 +84,16 @@ export const PATH_DASHBOARD = {
     root: path(ROOTS_DASHBOARD, '/transactions'),
     list: path(ROOTS_DASHBOARD, '/transactions/list'),
     new: path(ROOTS_DASHBOARD, '/transactions/new'),
+  },
+  categories: {
+    root: path(ROOTS_DASHBOARD, '/admin/categories'),
+    list: path(ROOTS_DASHBOARD, '/admin/categories/list'),
+    new: path(ROOTS_DASHBOARD, '/admin/categories/new'),
+  },
+  rules: {
+    root: path(ROOTS_DASHBOARD, '/admin/rules'),
+    list: path(ROOTS_DASHBOARD, '/admin/rules/list'),
+    new: path(ROOTS_DASHBOARD, '/admin/rules/new'),
   },
   invoice: {
     root: path(ROOTS_DASHBOARD, '/invoice'),

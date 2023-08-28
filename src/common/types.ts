@@ -4,6 +4,12 @@ export type ICollectionMetadata = {
     total: number,
 }
 
+export type IRestApiOptions = {
+    page?: number;
+    page_size?: number;
+    filters?: { column: string; operator?: string; value: any }[];
+};
+
 export type BalanceResource = {
     'initialBalance': number,
     'totalCredits': number,

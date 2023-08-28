@@ -14,28 +14,7 @@ import TransactionsListTable from "../../../modules/transactions/tables/Transact
 TransactionsListPage.getLayout = (page: React.ReactElement) => <DashboardLayout>{page}</DashboardLayout>;
 
 export default function TransactionsListPage() {
-    const theme = useTheme();
     const { themeStretch } = useSettingsContext();
-    const {
-        dense,
-        page,
-        order,
-        orderBy,
-        rowsPerPage,
-        setPage,
-        //
-        selected,
-        setSelected,
-        onSelectRow,
-        onSelectAllRows,
-        //
-        onSort,
-        onChangeDense,
-        onChangePage,
-        onChangeRowsPerPage,
-    } = useTable({ defaultOrderBy: 'transactionDate' });
-    const [tableData, setTableData] = useState<TransactionInterface[]>([]);
-
 
     return (
         <>

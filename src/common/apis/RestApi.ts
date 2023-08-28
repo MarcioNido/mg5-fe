@@ -1,29 +1,21 @@
 // @ts-ignore
 import qs from 'qs';
 import {api} from "./configs/axiosConfig";
+import {IRestApiOptions} from "../types";
 
-type ITransactionOptions = {
-    page?: number;
-    page_size?: number;
-    filters?: { column: string; value: any }[];
-};
+const DEFAULT_PAGE_SIZE = 20;
 
-const DEFAULT_PAGE_SIZE = 5;
+export const RestApi = (baseUrl: string) => {
 
-export const Transaction = {
-
-    async getAll(options: ITransactionOptions) {
-        // transforma os filtros em um array com a coluna send a chave
-        // ex: ?filter[account_number]=06402-12345&filter[transaction_date]=2023-04-06
-        // resource: https://github.com/axios/axios/issues/5058
+    async function getAll(options: IRestApiOptions) {
         const paramsSerializer = (params: any) => qs.stringify(params, { arrayFormat: 'repeat' });
         const filters = options.filters
             ?.filter((filter) => !!filter.value)
-            .map((filter) => ({ [filter.column]: filter.value }));
+            .map((filter) => ({ [filter.column]: filter.operator ? `${filter.operator},${filter.value}` : filter.value  }));
         // ------------------------------------------------------------
 
         const response = await api.request({
-            url: '/api/transactions',
+            url: baseUrl,
             method: 'GET',
             params: {
                 page: options.page ?? 1,
@@ -36,34 +28,42 @@ export const Transaction = {
         });
 
         return response.data;
-    },
+    }
 
-    async get(id: string) {
+    async function get(id: string) {
         const response = await api.request({
-            url: `/api/transactions/${id}`,
+            url: `${baseUrl}/${id}`,
             method: 'GET',
         });
 
         return response.data;
-    },
+    }
 
-    async create(data: any) {
+    async function create(data: any) {
         const response = await api.request({
-            url: `/api/transactions`,
+            url: baseUrl,
             method: 'POST',
             data,
         });
 
         return response.data;
-    },
+    }
 
-    async update(id: string, data: any) {
+    async function update(id: string, data: any) {
         const response = await api.request({
-            url: `/api/transactions/${id}`,
+            url: `${baseUrl}/${id}`,
             method: 'PUT',
             data,
         });
 
         return response.data;
     }
+
+    return {
+        getAll,
+        get,
+        create,
+        update
+    }
+
 }

@@ -2,28 +2,24 @@
 import qs from 'qs';
 import {api} from "./configs/axiosConfig";
 
-type ITransactionOptions = {
+type IAccountsOptions = {
     page?: number;
     page_size?: number;
-    filters?: { column: string; value: any }[];
+    filters?: { column: string; operator?: string; value: any }[];
+    orderBy?: { column: string; direction: 'asc' | 'desc' }[];
 };
 
 const DEFAULT_PAGE_SIZE = 5;
+export const Accounts = {
 
-export const Transaction = {
-
-    async getAll(options: ITransactionOptions) {
-        // transforma os filtros em um array com a coluna send a chave
-        // ex: ?filter[account_number]=06402-12345&filter[transaction_date]=2023-04-06
-        // resource: https://github.com/axios/axios/issues/5058
+    async getAll(options: IAccountsOptions) {
         const paramsSerializer = (params: any) => qs.stringify(params, { arrayFormat: 'repeat' });
         const filters = options.filters
             ?.filter((filter) => !!filter.value)
-            .map((filter) => ({ [filter.column]: filter.value }));
-        // ------------------------------------------------------------
+            .map((filter) => ({ [filter.column]: filter.operator ? `${filter.operator},${filter.value}` : filter.value }));
 
         const response = await api.request({
-            url: '/api/transactions',
+            url: '/api/accounts',
             method: 'GET',
             params: {
                 page: options.page ?? 1,
@@ -40,7 +36,7 @@ export const Transaction = {
 
     async get(id: string) {
         const response = await api.request({
-            url: `/api/transactions/${id}`,
+            url: `/api/accounts/${id}`,
             method: 'GET',
         });
 
@@ -49,7 +45,7 @@ export const Transaction = {
 
     async create(data: any) {
         const response = await api.request({
-            url: `/api/transactions`,
+            url: '/api/accounts',
             method: 'POST',
             data,
         });
@@ -59,7 +55,7 @@ export const Transaction = {
 
     async update(id: string, data: any) {
         const response = await api.request({
-            url: `/api/transactions/${id}`,
+            url: `/api/accounts/${id}`,
             method: 'PUT',
             data,
         });

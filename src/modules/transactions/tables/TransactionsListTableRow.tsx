@@ -23,7 +23,7 @@ export default function TransactionsListTableRow({
 
   const router = useRouter();
 
-  const { id, accountNumber, description, transactionDate, amount } = row;
+  const { id, account, description, transaction_date, amount } = row;
 
   const [openPopover, setOpenPopover] = useState<HTMLElement | null>(null);
 
@@ -35,8 +35,8 @@ export default function TransactionsListTableRow({
     setOpenPopover(null);
   };
 
-  const onViewRow = () => {
-     router.push(`/dashboard/transactions/${id}`);
+  const onEditRow = () => {
+     router.push(`/dashboard/transactions/${id}/edit`);
   }
 
   return (
@@ -44,7 +44,7 @@ export default function TransactionsListTableRow({
       <TableRow hover>
 
         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>
-          {accountNumber}
+          {account.account_number}
         </TableCell>
 
         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>
@@ -52,7 +52,7 @@ export default function TransactionsListTableRow({
         </TableCell>
 
         <TableCell align="left">
-          {fDate(transactionDate)}
+          {fDate(transaction_date)}
         </TableCell>
 
         <TableCell align="right">
@@ -75,12 +75,12 @@ export default function TransactionsListTableRow({
       >
         <MenuItem
             onClick={() => {
-              onViewRow();
+              onEditRow();
               handleClosePopover();
             }}
         >
-          <Iconify icon="eva:eye-fill" />
-          Ver detalhes
+          <Iconify icon="eva:edit-2-fill" />
+          Edit
         </MenuItem>
       </MenuPopover>
 

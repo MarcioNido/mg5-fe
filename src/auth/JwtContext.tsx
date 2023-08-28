@@ -99,7 +99,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (accessToken) {
         setSession(accessToken);
 
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/my-account`);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/my-account`);
 
         const { user } = response.data;
 

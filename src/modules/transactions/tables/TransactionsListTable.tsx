@@ -17,9 +17,9 @@ import TransactionsListTableBalance from "./TransactionsListTableBalance";
 import {Balance} from "../../../common/apis/Balance";
 
 const TABLE_HEAD = [
-    { id: 'accountNumber', label: 'Account', align: 'left' },
+    { id: 'account_number', label: 'Account', align: 'left' },
     { id: 'description', label: 'Description', align: 'left' },
-    { id: 'transactionDate', label: 'Date', align: 'left' },
+    { id: 'transaction_date', label: 'Date', align: 'left' },
     { id: 'amount', label: 'Amount', align: 'right' },
     { id: 'actions', label: '', align: 'right' },
 ];
@@ -40,15 +40,15 @@ export default function TransactionsListTable() {
         {value: 3, label: 'Marcio Visa RBC'}
     ];
 
-    const { filterValue: filterAccountNumber, handleFilterChange: handleFilterAccountNumberChange } = useFilter('');
+    const { filterValue: filteraccount_number, handleFilterChange: handleFilteraccount_numberChange } = useFilter('');
     const { filterValue: filterMonth, handleFilterChange: handleFilterMonthChange } =
         useFilter(null);
 
     const fetchBalance = useCallback(() => {
         setIsLoading(true);
         setBalanceData(undefined);
-        if (filterAccountNumber && filterMonth) {
-            Balance.get(filterAccountNumber, fMonth(filterMonth))
+        if (filteraccount_number && filterMonth) {
+            Balance.get(filteraccount_number, fMonth(filterMonth))
                 .then((data) => {
                     setBalanceData(data.data);
                     setIsLoading(false);
@@ -59,8 +59,7 @@ export default function TransactionsListTable() {
                 })
         }
 
-
-    }, [enqueueSnackbar, filterAccountNumber, filterMonth])
+    }, [enqueueSnackbar, filteraccount_number, filterMonth])
 
     const fetchPage = useCallback(() => {
         setIsLoading(true);
@@ -68,7 +67,7 @@ export default function TransactionsListTable() {
             page: page + 1,
             page_size: rowsPerPage,
             filters: [
-                { column: 'account_number', value: filterAccountNumber },
+                { column: 'account_number', value: filteraccount_number },
                 { column: 'month', value: (fMonth(filterMonth)) },
             ],
         })
@@ -81,7 +80,7 @@ export default function TransactionsListTable() {
                 enqueueSnackbar(error.response.data.message, { variant: 'error' });
                 setIsLoading(false);
             });
-    }, [enqueueSnackbar, filterMonth, filterAccountNumber, page, rowsPerPage]);
+    }, [enqueueSnackbar, filterMonth, filteraccount_number, page, rowsPerPage]);
 
     useEffect(() => {
         fetchPage();
@@ -94,13 +93,13 @@ export default function TransactionsListTable() {
     const filtersConfig: TableFilterBarProps = {
         config: [
             {
-                column: 'accountNumber',
+                column: 'account_number',
                 label: 'Account',
                 type: 'select',
                 options: AccountFilterOptions,
                 defaultValue: '',
-                value: filterAccountNumber,
-                onFilterEvent: handleFilterAccountNumberChange,
+                value: filteraccount_number,
+                onFilterEvent: handleFilteraccount_numberChange,
             },
             {
                 column: 'month',
@@ -111,7 +110,7 @@ export default function TransactionsListTable() {
                 onFilterEvent: handleFilterMonthChange,
             },
         ],
-        isFiltered: !!(filterAccountNumber || filterMonth),
+        isFiltered: !!(filteraccount_number || filterMonth),
     };
 
     return (
