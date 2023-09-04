@@ -23,7 +23,8 @@ export default function EditRulePage() {
     useEffect(() => {
         Rule.get(id as string)
             .then((response) => {
-                setRule(response.data);
+                console.log('response', response);
+                setRule(response);
             })
     }, [id]);
  

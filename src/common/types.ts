@@ -8,6 +8,7 @@ export type IRestApiOptions = {
     page?: number;
     page_size?: number;
     filters?: { column: string; operator?: string; value: any }[];
+    orderBy?: { column: string; direction?: string }[];
 };
 
 export type BalanceResource = {

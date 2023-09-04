@@ -2,13 +2,15 @@ import { Button, MenuItem, Stack, TextField } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import React, { useEffect, useState } from 'react';
 import Iconify from '../iconify';
+import RhfCategoriesAutocomplete from "../../modules/categories/components/rhf-categories-autocomplete";
+import {titleCase} from "tiny-case";
 
 export type TableFilterBarProps = {
   config: {
     column: string;
     label: string;
-    type: 'select' | 'text' | 'date' | 'month';
-    options?: {value: string | number; label: string | number}[] | null;
+    type: 'select' | 'text' | 'date' | 'month' | 'category';
+    options?: {value: string | number; label: string | number; level?: number}[] | null;
     defaultValue: string | Date | number | null;
     value: string | Date | number | null;
     onFilterEvent: React.EventHandler<any>;
@@ -122,6 +124,63 @@ export function TableFilterBar({ config }: TableFilterBarProps) {
                         />
                     )}
                 />
+            );
+          }
+
+          if (type === 'category') {
+            return (
+                <TextField
+                    fullWidth
+                    select
+                    label={label}
+                    value={value}
+                    onChange={onFilterEvent}
+                    SelectProps={{
+                      MenuProps: {
+                        PaperProps: {
+                          sx: {
+                            maxHeight: 260,
+                          },
+                        },
+                      },
+                    }}
+                    sx={{
+                      maxWidth: { sm: 240 },
+                      textTransform: 'capitalize',
+                    }}
+                >
+                  <MenuItem
+                    value={-1}
+                    sx={{
+                        mx: 1,
+                        borderRadius: 0.75,
+                        typography: 'body2',
+                        textTransform: 'capitalize',
+                    }}
+                    >
+                    Uncategorised
+                  </MenuItem>
+                  {options &&
+                      options.map((option) => (
+                          <MenuItem
+                              // key={option.key}
+                              value={option.value}
+                              sx={{
+                                mx: 1,
+                                borderRadius: 0.75,
+                                typography: 'body2',
+                                textTransform: 'capitalize',
+                              }}
+                          >
+                            {
+                              [...Array((option.level ?? 1) - 1)].map((e,i) =>
+                                  <Iconify key={i} icon="eva:chevron-right-fill" sx={{ verticalAlign: 'middle', mr: 3 }} />
+                              )
+                            }
+                            {titleCase(option.label.toString())}
+                          </MenuItem>
+                      ))}
+                </TextField>
             );
           }
 

@@ -35,7 +35,7 @@ export default function EditTransactionPage() {
     return (
         <>
             <Head>
-                <title> User: Edit user | Minimal UI</title>
+                <title> Edit Transaction | MoneyGuru5</title>
             </Head>
 
             <Container maxWidth={themeStretch ? false : 'lg'}>

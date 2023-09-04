@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import {TableHeadCustom, TableNoData, TablePaginationCustom, useTable} from "components/table";
 import {useSnackbar} from "notistack";
 import {useTheme} from "@mui/material/styles";
@@ -15,11 +15,15 @@ import TransactionsListTableRow from "./TransactionsListTableRow";
 import {fCurrency, fShortenNumber} from "../../../utils/formatNumber";
 import TransactionsListTableBalance from "./TransactionsListTableBalance";
 import {Balance} from "../../../common/apis/Balance";
+import {Categories} from "../../../common/apis/Categories";
+import {CategoryResource} from "../../../common/types/categories";
+import useParseCategoriesList from "../../../hooks/use-parse-categories-list";
+import {useSessionStorage} from "usehooks-ts";
 
 const TABLE_HEAD = [
-    { id: 'account_number', label: 'Account', align: 'left' },
-    { id: 'description', label: 'Description', align: 'left' },
     { id: 'transaction_date', label: 'Date', align: 'left' },
+    { id: 'description', label: 'Description', align: 'left' },
+    { id: 'category', label: 'Category', align: 'left' },
     { id: 'amount', label: 'Amount', align: 'right' },
     { id: 'actions', label: '', align: 'right' },
 ];
@@ -28,10 +32,17 @@ export default function TransactionsListTable() {
     const [tableData, setTableData] = useState<TransactionResource[]>();
     const [tableMetadata, setTableMetadata] = useState<ICollectionMetadata>();
     const [balanceData, setBalanceData] = useState<BalanceResource>();
+    const [parsedCategoriesList, setParsedCategoriesList] = useState<CategoryResource[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const { dense, onChangeDense, page, onChangePage, rowsPerPage, onChangeRowsPerPage } = useTable();
+    const { dense, onChangeDense } = useTable();
+
+    const [page, setPage] = useSessionStorage('transactionsListTablePage', 0);
+    const [rowsPerPage, setRowsPerPage] = useSessionStorage('transactionsListTableRowsPerPage', 15);
+
+
     const { enqueueSnackbar } = useSnackbar();
     const theme = useTheme();
+    const parseCategoriesList = useParseCategoriesList();
 
     // FILTERS
     const AccountFilterOptions = [
@@ -40,15 +51,25 @@ export default function TransactionsListTable() {
         {value: 3, label: 'Marcio Visa RBC'}
     ];
 
-    const { filterValue: filteraccount_number, handleFilterChange: handleFilteraccount_numberChange } = useFilter('');
+    const { filterValue: filterAccountNumber, handleFilterChange: handleFilterAccountNumberChange } = useFilter('');
     const { filterValue: filterMonth, handleFilterChange: handleFilterMonthChange } =
         useFilter(null);
+    const { filterValue: filterCategory, handleFilterChange: handleFilterCategoryChange } = useFilter('');
+
+    const onChangePage = (event: unknown, newPage: number) => {
+        setPage(newPage);
+    };
+
+    const onChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     const fetchBalance = useCallback(() => {
         setIsLoading(true);
         setBalanceData(undefined);
-        if (filteraccount_number && filterMonth) {
-            Balance.get(filteraccount_number, fMonth(filterMonth))
+        if (filterAccountNumber && filterMonth) {
+            Balance.get(filterAccountNumber, fMonth(filterMonth))
                 .then((data) => {
                     setBalanceData(data.data);
                     setIsLoading(false);
@@ -59,7 +80,7 @@ export default function TransactionsListTable() {
                 })
         }
 
-    }, [enqueueSnackbar, filteraccount_number, filterMonth])
+    }, [enqueueSnackbar, filterAccountNumber, filterMonth])
 
     const fetchPage = useCallback(() => {
         setIsLoading(true);
@@ -67,7 +88,8 @@ export default function TransactionsListTable() {
             page: page + 1,
             page_size: rowsPerPage,
             filters: [
-                { column: 'account_number', value: filteraccount_number },
+                { column: 'account_number', value: filterAccountNumber },
+                { column: 'category_id', value: filterCategory },
                 { column: 'month', value: (fMonth(filterMonth)) },
             ],
         })
@@ -80,7 +102,14 @@ export default function TransactionsListTable() {
                 enqueueSnackbar(error.response.data.message, { variant: 'error' });
                 setIsLoading(false);
             });
-    }, [enqueueSnackbar, filterMonth, filteraccount_number, page, rowsPerPage]);
+    }, [enqueueSnackbar, filterCategory, filterMonth, filterAccountNumber, page, rowsPerPage]);
+
+    useEffect(() => {
+        Categories.getAll({
+            filters: [{ column: 'level', operator: 'lte', value: 1}],
+            orderBy: [{ column: 'name', direction: 'asc' }],
+        }).then((res) => setParsedCategoriesList(parseCategoriesList(res.data, 3)));
+    }, []);
 
     useEffect(() => {
         fetchPage();
@@ -98,8 +127,8 @@ export default function TransactionsListTable() {
                 type: 'select',
                 options: AccountFilterOptions,
                 defaultValue: '',
-                value: filteraccount_number,
-                onFilterEvent: handleFilteraccount_numberChange,
+                value: filterAccountNumber,
+                onFilterEvent: handleFilterAccountNumberChange,
             },
             {
                 column: 'month',
@@ -109,8 +138,21 @@ export default function TransactionsListTable() {
                 value: filterMonth,
                 onFilterEvent: handleFilterMonthChange,
             },
+            {
+                column: 'category',
+                label: 'Category',
+                type: 'category',
+                options: parsedCategoriesList.map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                    level: category.level,
+                })),
+                defaultValue: '',
+                value: filterCategory,
+                onFilterEvent: handleFilterCategoryChange,
+            },
         ],
-        isFiltered: !!(filteraccount_number || filterMonth),
+        isFiltered: !!(filterAccountNumber || filterMonth),
     };
 
     return (

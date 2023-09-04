@@ -23,7 +23,7 @@ export default function TransactionsListTableRow({
 
   const router = useRouter();
 
-  const { id, account, description, transaction_date, amount } = row;
+  const { id, category, description, transaction_date, amount } = row;
 
   const [openPopover, setOpenPopover] = useState<HTMLElement | null>(null);
 
@@ -43,17 +43,18 @@ export default function TransactionsListTableRow({
     <>
       <TableRow hover>
 
-        <TableCell align="left" sx={{ textTransform: 'capitalize' }}>
-          {account.account_number}
-        </TableCell>
+          <TableCell align="left">
+              {fDate(transaction_date)}
+          </TableCell>
 
         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>
           {description}
         </TableCell>
 
-        <TableCell align="left">
-          {fDate(transaction_date)}
-        </TableCell>
+
+          <TableCell align="left" sx={{ textTransform: 'capitalize' }}>
+              {category?.name}
+          </TableCell>
 
         <TableCell align="right">
           {amount}

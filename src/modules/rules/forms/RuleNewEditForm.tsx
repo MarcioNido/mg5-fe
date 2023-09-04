@@ -4,7 +4,7 @@ import {Button, Card, CardHeader, Grid, Stack} from "@mui/material";
 import {useRouter} from "next/router";
 import {useSnackbar} from "notistack";
 import {CategoryResource} from "common/types/categories";
-import FormProvider, {RHFSelect, RHFTextField} from "../../../components/hook-form";
+import FormProvider, {RHFTextField} from "../../../components/hook-form";
 import useCustomForm from "../../../hooks/use-custom-form";
 import {AccountResource} from "../../../common/types/accounts";
 import {RuleResource} from "../../../common/types/rules";
@@ -52,6 +52,7 @@ export default function RuleNewEditForm({isEdit = false, currentRule}: Props) {
     } = methods;
 
     useEffect(() => {
+        console.log('defaultValues', defaultValues);
         if (isEdit && currentRule) {
             reset(defaultValues);
         }
@@ -88,7 +89,7 @@ export default function RuleNewEditForm({isEdit = false, currentRule}: Props) {
                         <Stack spacing={2} sx={{ p: 3 }}>
                             <RHFTextField name="content" label="Content" />
                             <RhfAccountsAutocomplete name="account" label="Account" />
-                            <RhfCategoriesAutocomplete name="category" label="Category" />
+                            <RhfCategoriesAutocomplete name="category" label="Category" maxLevel={3} />
                         </Stack>
 
                     </Card>
