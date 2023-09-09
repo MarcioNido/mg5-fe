@@ -3,7 +3,7 @@ import { ApexOptions } from 'apexcharts';
 import { useTheme } from '@mui/material/styles';
 import { Card, Typography, Stack, CardProps, Box } from '@mui/material';
 // utils
-import { fCurrency, fPercent } from '../../../../utils/formatNumber';
+import { fCurrency } from '../../../../utils/formatNumber';
 // theme
 import { ColorSchema } from '../../../../theme/palette';
 // components
@@ -15,7 +15,7 @@ import Chart, { useChart } from '../../../../components/chart';
 interface Props extends CardProps {
   title: string;
   total: number;
-  percent: number;
+  previous: number;
   color?: ColorSchema;
   icon: string;
   chart: {
@@ -28,7 +28,7 @@ export default function BankingWidgetSummary({
   title,
   total,
   icon,
-  percent,
+  previous,
   color = 'primary',
   chart,
   sx,
@@ -109,7 +109,7 @@ export default function BankingWidgetSummary({
 
         <Typography variant="h3">{fCurrency(total)}</Typography>
 
-        <TrendingInfo percent={percent} />
+        <TrendingInfo previous={previous} />
       </Stack>
 
       <Chart type="area" series={[{ data: series }]} options={chartOptions} height={120} />
@@ -120,21 +120,20 @@ export default function BankingWidgetSummary({
 // ----------------------------------------------------------------------
 
 type TrendingInfoProps = {
-  percent: number;
+  previous: number;
 };
 
-function TrendingInfo({ percent }: TrendingInfoProps) {
+function TrendingInfo({ previous }: TrendingInfoProps) {
   return (
     <Stack direction="row" alignItems="center" flexWrap="wrap" spacing={0.5}>
-      <Iconify icon={percent < 0 ? 'eva:trending-down-fill' : 'eva:trending-up-fill'} />
+      {/* <Iconify icon={percent < 0 ? 'eva:trending-down-fill' : 'eva:trending-up-fill'} /> */}
 
       <Typography variant="subtitle2" component="span">
-        {percent > 0 && '+'}
 
-        {fPercent(percent)}
+        {fCurrency(previous)}
 
         <Box component="span" sx={{ opacity: 0.72, typography: 'body2' }}>
-          {' than last month'}
+          {' last month'}
         </Box>
       </Typography>
     </Stack>

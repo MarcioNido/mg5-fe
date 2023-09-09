@@ -2,26 +2,22 @@
 import Head from 'next/head';
 // @mui
 import {useTheme} from '@mui/material/styles';
-import {Grid, Container, Stack, Typography, Box} from '@mui/material';
+import {Container, Grid, Stack, Typography} from '@mui/material';
 // layouts
 import {useCallback, useEffect, useState} from "react";
 import DashboardLayout from '../../layouts/dashboard';
 // _mock_
-import {
-    _bankingContacts,
-    _bankingCreditCard,
-    _bankingRecentTransitions,
-} from '../../_mock/arrays';
+import {_bankingCreditCard,} from '../../_mock/arrays';
 // components
 import {useSettingsContext} from '../../components/settings';
 // sections
 import {
-    BankingLatestUploads,
-    BankingWidgetSummary,
-    BankingCurrentBalance,
     BankingBalanceStatistics,
-    BankingRecentTransitions,
+    BankingCurrentBalance,
     BankingExpensesCategories,
+    BankingLatestUploads,
+    BankingRecentTransitions,
+    BankingWidgetSummary,
 } from '../../sections/@dashboard/general/banking';
 import {UploadBox} from "../../components/upload";
 import Iconify from "../../components/iconify";
@@ -36,11 +32,24 @@ GeneralBankingPage.getLayout = (page: React.ReactElement) => (
     <DashboardLayout>{page}</DashboardLayout>
 );
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+type IMonthlyBalance = {
+    categories?: string[];
+    income?: number[];
+    expense?: number[];
+}
+
 // ----------------------------------------------------------------------
 export default function GeneralBankingPage() {
     const theme = useTheme();
     const [latestUploads, setLatestUploads] = useState([]);
     const [latestTransactions, setLatestTransactions] = useState<TransactionInterface[]>([]);
+    const [currentMonthIncome, setCurrentMonthIncome] = useState(0);
+    const [currentMonthExpense, setCurrentMonthExpense] = useState(0);
+    const [previousMonthIncome, setPreviousMonthIncome] = useState(0);
+    const [previousMonthExpenses, setPreviousMonthExpenses] = useState(0);
+    const [monthlyBalance, setMonthlyBalance] = useState<IMonthlyBalance>({});
 
     const {themeStretch} = useSettingsContext();
 
@@ -51,9 +60,61 @@ export default function GeneralBankingPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [latestUploads]);
 
+    const parseMonthlyBalanceResponse = (balance: any) => {
+        const currentDate = new Date();
+        const categories = [];
+        const income = [];
+        const expense = [];
+
+        for (let i = 11; i >= 0; i-=1) {
+            const balanceDate = new Date();
+            balanceDate.setMonth(currentDate.getMonth() - i);
+            const month = balanceDate.getMonth() + 1;
+            const year = balanceDate.getFullYear();
+
+            categories.push(`${MONTHS[month - 1]} ${year}`);
+            income.push(Math.floor(balance.income.find((item: any) => item.month === month && item.year === year)?.total || 0));
+            expense.push(Math.floor(Math.abs(balance.expense.find((item: any) => item.month === month && item.year === year)?.total || 0)));
+        }
+
+        return {
+            categories,
+            income,
+            expense,
+        };
+    }
+
+    const fetchMonthlyStats = useCallback(async () => {
+        const currentMonthDate = new Date();
+        const currentMonth = currentMonthDate.getMonth();
+        const currentYear = currentMonthDate.getFullYear();
+
+        const previousMonthDate = new Date();
+        previousMonthDate.setMonth(currentMonth - 1);
+        const previousMonth = previousMonthDate.getMonth();
+        const previousYear = previousMonthDate.getFullYear();
+
+        const currentMonthIncomeResponse = await Transaction.getIncomeByMonth(currentMonth + 1, currentYear);
+        setCurrentMonthIncome(currentMonthIncomeResponse.income);
+
+        const currentMonthExpensesResponse = await Transaction.getExpenseByMonth(currentMonth + 1, currentYear);
+        setCurrentMonthExpense(currentMonthExpensesResponse.expense);
+
+        const previousMonthIncomeResponse = await Transaction.getIncomeByMonth(previousMonth + 1, previousYear);
+        setPreviousMonthIncome(previousMonthIncomeResponse.income);
+
+        const previousMonthExpensesResponse = await Transaction.getExpenseByMonth(previousMonth + 1, previousYear);
+        setPreviousMonthExpenses(previousMonthExpensesResponse.expense);
+
+        const monthlyBalanceResponse = await Transaction.getMonthlyBalance(currentMonth + 1, currentYear);
+        setMonthlyBalance(parseMonthlyBalanceResponse(monthlyBalanceResponse));
+
+    }, []);
+
     const fetchTransactionData = useCallback(async () => {
-        const transactionData = await Transaction.getAll();
-        setLatestTransactions(transactionData);
+        const transactionData = await Transaction.getAll({});
+        console.log(transactionData);
+        setLatestTransactions(transactionData.data);
     }, []);
 
     const handleDrop = useCallback(
@@ -73,6 +134,11 @@ export default function GeneralBankingPage() {
             .catch(console.error)
     }, [fetchTransactionData]);
 
+    useEffect(() => {
+        fetchMonthlyStats()
+            .catch(console.error)
+    }, [fetchMonthlyStats]);
+
     return (
         <>
             <Head>
@@ -86,8 +152,8 @@ export default function GeneralBankingPage() {
                             <BankingWidgetSummary
                                 title="Income"
                                 icon="eva:diagonal-arrow-left-down-fill"
-                                percent={2.6}
-                                total={18765}
+                                previous={previousMonthIncome}
+                                total={currentMonthIncome}
                                 chart={{
                                     series: [111, 136, 76, 108, 74, 54, 57, 84],
                                 }}
@@ -97,8 +163,8 @@ export default function GeneralBankingPage() {
                                 title="Expenses"
                                 color="warning"
                                 icon="eva:diagonal-arrow-right-up-fill"
-                                percent={-0.5}
-                                total={8938}
+                                previous={previousMonthExpenses}
+                                total={currentMonthExpense}
                                 chart={{
                                     series: [111, 136, 76, 108, 74, 54, 57, 84],
                                 }}
@@ -112,37 +178,37 @@ export default function GeneralBankingPage() {
 
                     <Grid item xs={12} md={8}>
                         <Stack spacing={3}>
-                            <BankingBalanceStatistics
+                            {monthlyBalance.categories && (<BankingBalanceStatistics
                                 title="Balance Statistics"
-                                subheader="(+43% Income | +12% Expense) than last year"
+                                subheader="monthly analytics"
                                 chart={{
-                                    categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+                                    categories: monthlyBalance.categories,
                                     colors: [theme.palette.primary.main, theme.palette.warning.main],
                                     series: [
-                                        {
-                                            type: 'Week',
-                                            data: [
-                                                {name: 'Income', data: [10, 41, 35, 151, 49, 62, 69, 91, 48]},
-                                                {name: 'Expenses', data: [10, 34, 13, 56, 77, 88, 99, 77, 45]},
-                                            ],
-                                        },
+                                        // {
+                                        //     type: 'Week',
+                                        //     data: [
+                                        //         {name: 'Income', data: monthlyBalance.income ?? []},
+                                        //         {name: 'Expenses', data: monthlyBalance.expense ?? []},
+                                        //     ],
+                                        // },
                                         {
                                             type: 'Month',
                                             data: [
-                                                {name: 'Income', data: [148, 91, 69, 62, 49, 51, 35, 41, 10]},
-                                                {name: 'Expenses', data: [45, 77, 99, 88, 77, 56, 13, 34, 10]},
+                                                {name: 'Income', data: monthlyBalance.income ?? []},
+                                                {name: 'Expenses', data: monthlyBalance.expense ?? []},
                                             ],
                                         },
-                                        {
-                                            type: 'Year',
-                                            data: [
-                                                {name: 'Income', data: [76, 42, 29, 41, 27, 138, 117, 86, 63]},
-                                                {name: 'Expenses', data: [80, 55, 34, 114, 80, 130, 15, 28, 55]},
-                                            ],
-                                        },
+                                        // {
+                                        //     type: 'Year',
+                                        //     data: [
+                                        //         {name: 'Income', data: monthlyBalance.income ?? []},
+                                        //         {name: 'Expenses', data: monthlyBalance.expense ?? []},
+                                        //     ],
+                                        // },
                                     ],
                                 }}
-                            />
+                            />)}
 
                             <BankingExpensesCategories
                                 title="Expenses Categories"

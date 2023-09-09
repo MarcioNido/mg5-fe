@@ -28,7 +28,7 @@ interface Props extends CardProps {
 export default function BankingBalanceStatistics({ title, subheader, chart, ...other }: Props) {
   const { categories, colors, series, options } = chart;
 
-  const [seriesData, setSeriesData] = useState('Year');
+  const [seriesData, setSeriesData] = useState('Month');
 
   const chartOptions = useChart({
     colors,

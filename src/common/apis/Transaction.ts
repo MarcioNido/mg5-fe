@@ -65,5 +65,33 @@ export const Transaction = {
         });
 
         return response.data;
-    }
+    },
+
+    async getIncomeByMonth(month: number, year: number) {
+        const response = await api.request({
+            url: `/api/transactions/income/${month}/${year}`,
+            method: 'GET',
+        });
+
+        return response.data;
+    },
+
+    async getExpenseByMonth(month: number, year: number) {
+        const response = await api.request({
+            url: `/api/transactions/expense/${month}/${year}`,
+            method: 'GET',
+        });
+
+        return response.data;
+    },
+
+    async getMonthlyBalance(month: number, year: number) {
+        const response = await api.request({
+            url: `/api/transactions/balance/${month}/${year}`,
+            method: 'GET',
+        });
+
+        return response.data;
+    },
+
 }
