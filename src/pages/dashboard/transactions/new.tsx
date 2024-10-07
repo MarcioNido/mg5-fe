@@ -4,7 +4,10 @@ import CustomBreadcrumbs from "../../../components/custom-breadcrumbs";
 import {PATH_DASHBOARD} from "../../../routes/paths";
 import TransactionNewEditForm from "../../../modules/transactions/forms/TransactionNewEditForm";
 import {useSettingsContext} from "../../../components/settings";
+import DashboardLayout from '../../../layouts/dashboard';
+import EditTransactionPage from './[id]/edit';
 
+NewTransactionPage.getLayout = (page: React.ReactElement) => <DashboardLayout>{page}</DashboardLayout>;
 export default function NewTransactionPage() {
     const { themeStretch } = useSettingsContext();
 

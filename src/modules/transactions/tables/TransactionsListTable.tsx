@@ -49,7 +49,9 @@ export default function TransactionsListTable() {
         {value: '06402-5031752', label: 'Marcio RBC Chequing'},
         {value: 2, label: 'Marcio RBC Savings'},
         {value: '4514093608902876', label: 'Marcio Visa RBC'},
-        {value: '05592-1065119', label: 'Monica Business Chequing'}
+        {value: '06402-5039466', label: 'Monica RBC Chequing'},
+        {value: '4514011823312671', label: 'Monica Visa RBC'},
+
     ];
 
     const { filterValue: filterAccountNumber, handleFilterChange: handleFilterAccountNumberChange } = useFilter('');

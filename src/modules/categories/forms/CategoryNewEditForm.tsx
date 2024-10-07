@@ -1,18 +1,19 @@
 import * as Yup from 'yup';
-import {useEffect, useMemo} from "react";
-import {Button, Card, CardHeader, Grid, Stack} from "@mui/material";
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, CardHeader, Dialog, Grid, Stack } from '@mui/material';
 import {useRouter} from "next/router";
 import {useSnackbar} from "notistack";
-import FormProvider, {RHFSelect, RHFTextField} from "../../../components/hook-form";
 import {CategoryResource} from "common/types/categories";
+import FormProvider, {RHFSelect, RHFTextField} from "../../../components/hook-form";
 import {Categories} from "../../../common/apis/Categories";
 import useCustomForm from "../../../hooks/use-custom-form";
 import RhfCategoriesAutocomplete from "../components/rhf-categories-autocomplete";
-import {countries} from "../../../assets/data";
 
 type Props = {
     isEdit?: boolean;
     currentCategory?: CategoryResource;
+    isModal?: boolean;
+    onCategoryCreated?:(category: CategoryResource) => void;
 };
 
 type FormValueProps = {
@@ -21,7 +22,7 @@ type FormValueProps = {
     parent: CategoryResource | null;
 }
 
-export default function CategoryNewEditForm({isEdit = false, currentCategory}: Props) {
+export default function CategoryNewEditForm({isEdit = false, currentCategory, isModal = false, onCategoryCreated}: Props) {
 
     const router = useRouter();
     const { enqueueSnackbar } = useSnackbar();
@@ -60,9 +61,15 @@ export default function CategoryNewEditForm({isEdit = false, currentCategory}: P
 
     const handleSubmitForm = (values: FormValueProps) => {
         if (!isEdit || !currentCategory) {
-            Categories.create(values).then(() => {
+            Categories.create(values).then((categoryCreated: CategoryResource) => {
                 enqueueSnackbar('Category created successfully', {variant: 'success'});
-                router.push('/dashboard/admin/categories/list');
+                if (!isModal) {
+                    router.push('/dashboard/admin/categories/list');
+                    return;
+                }
+                if (onCategoryCreated) {
+                    onCategoryCreated(categoryCreated);
+                }
 
             }).catch((error) => {
                 enqueueSnackbar('Category creation failed', {variant: 'error'});
@@ -81,7 +88,7 @@ export default function CategoryNewEditForm({isEdit = false, currentCategory}: P
 
     return (
         <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
+            <Grid item xs={12}>
                 <FormProvider methods={methods} onSubmit={handleSubmit(handleSubmitForm)}>
                     <Card sx={{mb: 2}}>
                         <CardHeader title={isEdit ? 'Edit Category' : 'New Category'} />
@@ -95,7 +102,10 @@ export default function CategoryNewEditForm({isEdit = false, currentCategory}: P
                                     </option>
                                 ))}
                             </RHFSelect>
-                            <RhfCategoriesAutocomplete name="parent" label="Parent" maxLevel={2} />
+                            <Stack direction="row">
+                                <RhfCategoriesAutocomplete name="parent" label="Parent" maxLevel={2} />
+                            </Stack>
+
                         </Stack>
 
                     </Card>
