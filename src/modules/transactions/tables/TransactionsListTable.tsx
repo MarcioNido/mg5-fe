@@ -51,13 +51,15 @@ export default function TransactionsListTable() {
         {value: '4514093608902876', label: 'Marcio Visa RBC'},
         {value: '06402-5039466', label: 'Monica RBC Chequing'},
         {value: '4514011823312671', label: 'Monica Visa RBC'},
-
+        {value: '7727', label: 'Triangle Mastercard'},
+        {value: '05592-1065119', label: 'Corporation Chequing'},
+        {value: '4516070107000509', label: 'Corporation Visa RBC'},
     ];
 
-    const { filterValue: filterAccountNumber, handleFilterChange: handleFilterAccountNumberChange } = useFilter('');
+    const { filterValue: filterAccountNumber, handleFilterChange: handleFilterAccountNumberChange } = useFilter('transactionAccountNumber', '');
     const { filterValue: filterMonth, handleFilterChange: handleFilterMonthChange } =
-        useFilter(null);
-    const { filterValue: filterCategory, handleFilterChange: handleFilterCategoryChange } = useFilter('');
+        useFilter('transactionMonth', null);
+    const { filterValue: filterCategory, handleFilterChange: handleFilterCategoryChange } = useFilter('transactionCategory', '');
 
     const onChangePage = (event: unknown, newPage: number) => {
         setPage(newPage);

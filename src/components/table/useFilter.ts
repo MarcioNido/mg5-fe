@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useSessionStorage } from 'usehooks-ts';
 
-export default function useFilter(defaultValue: string | Date | null) {
-  const [filterValue, setFilterValue] = useState<string | Date | null>(defaultValue);
+export default function useFilter(name: string, defaultValue: string | Date | null) {
+  const [filterValue, setFilterValue] = useSessionStorage<string | Date | null>(name, defaultValue);
 
   const handleFilterChange = (
     event: React.ChangeEvent<HTMLInputElement> | Date | string | null
