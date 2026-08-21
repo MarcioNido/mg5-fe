@@ -23,4 +23,4 @@ npm run build
 
 Authentication uses a small same-origin Next.js API bridge. The Laravel Sanctum token remains in a server-managed `HttpOnly` cookie and is never exposed to browser JavaScript. Financial-profile selection comes from the authenticated backend tenant list and tenant-aware requests send `X-Tenant-Slug`.
 
-See [Phase 4 documentation](docs/phase-4-clean-frontend-foundation.md) for routes, architecture, security decisions, and the Phase 5 handoff.
+See [Phase 4 documentation](docs/phase-4-clean-frontend-foundation.md) for the foundation and [Phase 5A.2 documentation](docs/phase-5a-accounts-imports.md) for account management, CSV upload/history/detail, polling, and tenant isolation.

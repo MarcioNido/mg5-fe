@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 
@@ -22,6 +23,9 @@ vi.mock('@/features/auth/auth-service', () => ({
 }));
 
 import { AuthProvider, useAuth } from '@/features/auth/auth-context';
+import { SessionGate } from '@/features/auth/session-gate';
+import { ApiError } from '@/lib/api/error';
+import { proxy, SESSION_COOKIE } from '@/proxy';
 
 function LogoutHarness() {
   const { logout } = useAuth();
@@ -53,5 +57,31 @@ describe('authentication context logout', () => {
     expect(await screen.findByText('Logout completed')).toBeVisible();
     expect(mocks.replace).toHaveBeenCalledWith('/login');
     expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a cookie-backed protected route on a recoverable 503 and retries session recovery', async () => {
+    mocks.session
+      .mockRejectedValueOnce(new ApiError(503, 'The Money Guru API is currently unavailable.'))
+      .mockResolvedValueOnce({ user: { id: 1, name: 'Admin', email: 'admin@example.com' } });
+    const loginRequest = new NextRequest('http://localhost:8081/login', {
+      headers: { cookie: `${SESSION_COOKIE}=existing-session` },
+    });
+    expect(proxy(loginRequest).headers.get('location')).toBe('http://localhost:8081/dashboard');
+
+    render(<AuthProvider><SessionGate><div>Protected dashboard</div></SessionGate></AuthProvider>);
+
+    expect(await screen.findByText('Money Guru API is currently unavailable.')).toBeVisible();
+    expect(mocks.replace).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByText('Protected dashboard')).toBeVisible();
+    expect(mocks.session).toHaveBeenCalledTimes(2);
+  });
+
+  it('still redirects an invalid 401 session to login', async () => {
+    mocks.session.mockRejectedValue(new ApiError(401, 'Your session has expired.'));
+    render(<AuthProvider><SessionGate><div>Protected dashboard</div></SessionGate></AuthProvider>);
+
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/login'));
+    expect(screen.queryByText('Money Guru API is currently unavailable.')).not.toBeInTheDocument();
   });
 });

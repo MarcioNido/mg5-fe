@@ -115,4 +115,35 @@ describe('server-side API bridge', () => {
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('preserves multipart boundary, tenant header, status, and no-store for file uploads', async () => {
+    process.env.MG5_API_URL = 'http://backend.test';
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { id: 9 }, meta: { duplicate_upload: false } }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const boundary = '----mg5-test-boundary';
+    const body = `--${boundary}\r\nContent-Disposition: form-data; name="account_id"\r\n\r\n4\r\n--${boundary}--\r\n`;
+    const request = new NextRequest('http://localhost:8081/api/files', {
+      method: 'POST',
+      headers: {
+        cookie: 'mg5_session=sensitive-token',
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'X-Tenant-Slug': 'clinic',
+        Origin: 'http://localhost:8081',
+        'Sec-Fetch-Site': 'same-origin',
+      },
+      body,
+    });
+
+    const response = await POST(request, { params: Promise.resolve({ path: ['files'] }) });
+    const forwarded = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const headers = forwarded.headers as Headers;
+    expect(headers.get('Content-Type')).toBe(`multipart/form-data; boundary=${boundary}`);
+    expect(headers.get('X-Tenant-Slug')).toBe('clinic');
+    expect(new TextDecoder().decode(forwarded.body as ArrayBuffer)).toBe(body);
+    expect(response.status).toBe(201);
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+  });
 });

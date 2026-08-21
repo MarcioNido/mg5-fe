@@ -11,12 +11,26 @@ import { routes } from '@/lib/config/routes';
 import { useAuth } from './auth-context';
 
 export function SessionGate({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionError, retrySession } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) router.replace(routes.login);
-  }, [loading, router, user]);
+    if (!loading && !user && !sessionError) router.replace(routes.login);
+  }, [loading, router, sessionError, user]);
+
+  if (sessionError) {
+    return (
+      <Stack minHeight="100vh" alignItems="center" justifyContent="center" spacing={2} px={2}>
+        <Alert
+          severity="error"
+          action={<Button color="inherit" onClick={retrySession}>Retry</Button>}
+          sx={{ width: '100%', maxWidth: 560 }}
+        >
+          {sessionError}
+        </Alert>
+      </Stack>
+    );
+  }
 
   if (loading || !user) {
     return (
@@ -29,3 +43,5 @@ export function SessionGate({ children }: { children: ReactNode }) {
 
   return children;
 }
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
