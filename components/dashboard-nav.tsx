@@ -3,6 +3,7 @@ import CategoryRounded from '@mui/icons-material/CategoryRounded';
 import DashboardRounded from '@mui/icons-material/DashboardRounded';
 import FactCheckRounded from '@mui/icons-material/FactCheckRounded';
 import FileUploadRounded from '@mui/icons-material/FileUploadRounded';
+import CompareArrowsRounded from '@mui/icons-material/CompareArrowsRounded';
 import ReceiptLongRounded from '@mui/icons-material/ReceiptLongRounded';
 import RuleRounded from '@mui/icons-material/RuleRounded';
 import type { ReactNode } from 'react';
@@ -15,6 +16,7 @@ export const navigation: NavigationItem[] = [
   { label: 'Dashboard', href: routes.dashboard, icon: <DashboardRounded /> },
   { label: 'Transactions', href: routes.transactions, icon: <ReceiptLongRounded /> },
   { label: 'Imports', href: routes.imports, icon: <FileUploadRounded /> },
+  { label: 'Matching', href: routes.matching, icon: <CompareArrowsRounded /> },
   { label: 'Reconciliation', href: routes.reconciliation, icon: <FactCheckRounded /> },
   { label: 'Accounts', href: routes.accounts, icon: <AccountBalanceRounded /> },
   { label: 'Categories', href: routes.categories, icon: <CategoryRounded /> },

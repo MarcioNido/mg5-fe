@@ -3,6 +3,7 @@ export const routes = {
   dashboard: '/dashboard',
   transactions: '/dashboard/transactions',
   imports: '/dashboard/imports',
+  matching: '/dashboard/matching',
   reconciliation: '/dashboard/reconciliation',
   accounts: '/dashboard/accounts',
   categories: '/dashboard/categories',
