@@ -13,6 +13,7 @@ const tenantPathPatterns = [
   /^accounts(?:\/\d+(?:\/reconciliations(?:\/latest)?)?)?$/,
   /^balances\/\d+\/[^/]+$/,
   /^categories(?:\/\d+)?$/,
+  /^dashboard\/summary$/,
   /^files(?:\/\d+)?$/,
   /^match-suggestions(?:\/\d+\/(?:confirm|reject))?$/,
   /^rules(?:\/\d+)?$/,

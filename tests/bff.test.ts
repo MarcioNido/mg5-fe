@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DELETE, POST } from '@/app/api/[...path]/route';
+import { DELETE, GET, POST } from '@/app/api/[...path]/route';
 
 describe('server-side API bridge', () => {
   afterEach(() => {
@@ -145,5 +145,34 @@ describe('server-side API bridge', () => {
     expect(new TextDecoder().decode(forwarded.body as ArrayBuffer)).toBe(body);
     expect(response.status).toBe(201);
     expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+  });
+
+  it('allows and forwards the tenant-aware dashboard summary query', async () => {
+    process.env.MG5_API_URL = 'http://backend.test';
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: { period: { month: '2026-08' } },
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const request = new NextRequest('http://localhost:8081/api/dashboard/summary?month=2026-08', {
+      method: 'GET',
+      headers: {
+        cookie: 'mg5_session=sensitive-token',
+        'X-Tenant-Slug': 'clinic',
+      },
+    });
+
+    const response = await GET(request, { params: Promise.resolve({ path: ['dashboard', 'summary'] }) });
+    const forwarded = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const headers = forwarded.headers as Headers;
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://backend.test/api/dashboard/summary?month=2026-08');
+    expect(headers.get('Authorization')).toBe('Bearer sensitive-token');
+    expect(headers.get('X-Tenant-Slug')).toBe('clinic');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(await response.json()).toEqual({ data: { period: { month: '2026-08' } } });
   });
 });
