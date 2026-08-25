@@ -175,4 +175,34 @@ describe('server-side API bridge', () => {
     expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(await response.json()).toEqual({ data: { period: { month: '2026-08' } } });
   });
+
+  it('allows and forwards the tenant-aware reconciliation preview query', async () => {
+    process.env.MG5_API_URL = 'http://backend.test';
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: { statement_date: '2026-08-25', calculated_balance: '1250.4000' },
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const request = new NextRequest('http://localhost:8081/api/accounts/2/reconciliations/preview?statement_date=2026-08-25', {
+      method: 'GET',
+      headers: {
+        cookie: 'mg5_session=sensitive-token',
+        'X-Tenant-Slug': 'personal',
+      },
+    });
+
+    const response = await GET(request, {
+      params: Promise.resolve({ path: ['accounts', '2', 'reconciliations', 'preview'] }),
+    });
+    const forwarded = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const headers = forwarded.headers as Headers;
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://backend.test/api/accounts/2/reconciliations/preview?statement_date=2026-08-25');
+    expect(headers.get('Authorization')).toBe('Bearer sensitive-token');
+    expect(headers.get('X-Tenant-Slug')).toBe('personal');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ data: { statement_date: '2026-08-25', calculated_balance: '1250.4000' } });
+  });
 });

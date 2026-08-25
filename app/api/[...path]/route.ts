@@ -10,7 +10,7 @@ const authenticatedOperations = new Set([
 ]);
 
 const tenantPathPatterns = [
-  /^accounts(?:\/\d+(?:\/reconciliations(?:\/latest)?)?)?$/,
+  /^accounts(?:\/\d+(?:\/reconciliations(?:\/(?:latest|preview))?)?)?$/,
   /^balances\/\d+\/[^/]+$/,
   /^categories(?:\/\d+)?$/,
   /^dashboard\/summary$/,
