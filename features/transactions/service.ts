@@ -1,7 +1,7 @@
 import { apiRequest } from '@/lib/api/client';
+export { listCategories } from '@/features/categories/service';
 
 import type {
-  CategoriesResponse,
   CreateTransactionInput,
   Transaction,
   TransactionFilters,
@@ -47,13 +47,5 @@ export function updateTransaction(tenantSlug: string, id: Transaction['id'], inp
 export function deleteTransaction(tenantSlug: string, id: Transaction['id']) {
   return apiRequest<void>(`transactions/${id}`, {
     method: 'DELETE', tenantAware: true, tenantSlug,
-  });
-}
-
-export function listCategories(tenantSlug: string, signal?: AbortSignal) {
-  return apiRequest<CategoriesResponse>('categories', {
-    tenantAware: true,
-    tenantSlug,
-    signal,
   });
 }

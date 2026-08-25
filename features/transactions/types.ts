@@ -1,22 +1,10 @@
 import type { AccountType } from '@/features/accounts/types';
+import type { Category } from '@/features/categories/types';
+
+export type { Category, CategoryDetail, CategoryIdentity } from '@/features/categories/types';
 
 export type TransactionStatus = 'pending' | 'posted';
 export type TransactionOrigin = 'manual' | 'csv' | 'system';
-
-export type CategoryIdentity = {
-  id: number;
-  name: string;
-  type: string;
-  level: number;
-};
-
-export type Category = CategoryIdentity & {
-  parent: CategoryIdentity | null;
-};
-
-export type CategoryDetail = Category & {
-  children?: CategoryDetail[];
-};
 
 export type TransactionSplit = {
   id: number;
