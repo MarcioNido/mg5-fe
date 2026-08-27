@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Account } from '@/features/accounts/types';
-import { differenceMeaning, ReconciliationView, validBankBalance, validStatementDate } from '@/features/reconciliation/reconciliation-view';
+import { differenceMeaning, reconciliationReviewHref, ReconciliationView, validBankBalance, validStatementDate } from '@/features/reconciliation/reconciliation-view';
 import { ApiError } from '@/lib/api/error';
 
 const account = { id: 17, account_number: null, name: 'Clinic Chequing', type: 'chequing' as const, currency: 'CAD', opening_balance: '100.0000', opening_balance_date: '2026-01-01' };
@@ -44,6 +44,11 @@ describe('reconciliation view helpers', () => {
     expect(differenceMeaning('10.0000')).toContain('higher');
     expect(differenceMeaning('-10.0000')).toContain('lower');
     expect(differenceMeaning('0.0000')).toBe('Balances agree.');
+    expect(reconciliationReviewHref(17, '2026-08-24', {
+      statement_date: '2026-08-24',
+      calculated_balance: '0.0000',
+      review_period: { date_from: '2026-08-01', date_to: '2026-08-24', previous_statement_date: '2026-07-31' },
+    })).toBe('/dashboard/transactions?review=reconciliation&account_id=17&status=posted&date_to=2026-08-24&date_from=2026-08-01');
   });
 });
 
@@ -51,7 +56,7 @@ describe('reconciliation view', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true }); vi.setSystemTime(new Date('2026-08-24T16:00:00Z'));
     mocks.slug = 'personal'; mocks.accounts = [account, secondAccount]; mocks.accountsLoading = false; mocks.accountsError = null;
-    mocks.preview.mockResolvedValue({ data: { statement_date: '2026-08-24', calculated_balance: '1250.4000' } });
+    mocks.preview.mockResolvedValue({ data: { statement_date: '2026-08-24', calculated_balance: '1250.4000', review_period: { date_from: '2026-08-01', date_to: '2026-08-24', previous_statement_date: '2026-07-31' } } });
     mocks.history.mockResolvedValue(historyResponse); mocks.latest.mockResolvedValue({ data: validRow }); mocks.store.mockResolvedValue({ data: validRow });
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() });
   });
@@ -110,7 +115,7 @@ describe('reconciliation view', () => {
     expect(input).toBeDisabled(); expect(screen.getByRole('combobox', { name: 'Account' })).toHaveAttribute('aria-disabled', 'true');
     await act(async () => resolveStore({ data: { ...invalidRow, statement_date: '2026-08-24' } }));
     expect(await screen.findByText('Balances do not agree')).toBeVisible(); expect(screen.getByText(/entered bank balance is lower/)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Review transactions' })).toHaveAttribute('href', '/dashboard/transactions');
+    expect(screen.getByRole('link', { name: 'Review transactions' })).toHaveAttribute('href', '/dashboard/transactions?review=reconciliation&account_id=17&status=posted&date_to=2026-08-24&date_from=2026-08-01');
     await waitFor(() => { expect(mocks.preview).toHaveBeenCalledTimes(2); expect(mocks.latest).toHaveBeenCalledTimes(2); expect(mocks.history).toHaveBeenCalledTimes(2); });
   });
 

@@ -1,5 +1,7 @@
 import { TransactionsView } from '@/features/transactions/transactions-view';
 
-export default function Page() {
-  return <TransactionsView />;
+type Query = Record<string, string | string[] | undefined>;
+
+export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
+  return <TransactionsView query={await searchParams} />;
 }

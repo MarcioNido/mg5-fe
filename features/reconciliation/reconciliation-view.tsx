@@ -50,6 +50,20 @@ export function differenceMeaning(value: string) {
     : 'The entered bank balance is higher than MG5.';
 }
 
+export function reconciliationReviewHref(accountId: number, statementDate: string, preview: ReconciliationPreview | null) {
+  const params = new URLSearchParams({
+    review: 'reconciliation',
+    account_id: String(accountId),
+    status: 'posted',
+    date_to: statementDate,
+  });
+  if (preview?.statement_date === statementDate && preview.review_period?.date_from) {
+    params.set('date_from', preview.review_period.date_from);
+  }
+
+  return `/dashboard/transactions?${params}`;
+}
+
 export function ReconciliationView() {
   const { selectedSlug, loading } = useTenant();
   return <ReconciliationTenantView key={selectedSlug ?? 'no-tenant'} tenantSlug={selectedSlug} tenantLoading={loading} />;
@@ -105,6 +119,9 @@ function ReconciliationTenantView({ tenantSlug, tenantLoading }: { tenantSlug: s
     && resultContext.statementDate === statementDate
     && resultContext.enteredBankBalance === bankBalance
     ? result : null;
+  const reviewTransactionsHref = selectedAccount
+    ? reconciliationReviewHref(selectedAccount.id, statementDate, preview)
+    : '/dashboard/transactions';
 
   const resetAccountSpecificState = useCallback((nextId: string) => {
     setAccountId(nextId); setStatementDate(todayInBusinessTimezone()); setBankBalance(''); setFieldErrors({}); setSubmitError(null); setResult(null); setResultContext(null);
@@ -301,7 +318,7 @@ function ReconciliationTenantView({ tenantSlug, tenantLoading }: { tenantSlug: s
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 3 }} mt={2}><Typography>Bank: <strong>{formatDecimalCurrency(displayedResult.entered_bank_balance, selectedAccount.currency)}</strong></Typography><Typography>MG5: <strong>{formatDecimalCurrency(displayedResult.calculated_balance, selectedAccount.currency)}</strong></Typography><Typography>Difference: <strong>{formatDecimalCurrency(displayedResult.difference, selectedAccount.currency)}</strong></Typography></Stack>
         <Typography mt={1.5}>{displayedResult.is_valid ? `This account is reconciled through ${formatDateOnly(displayedResult.statement_date)}.` : differenceMeaning(displayedResult.difference)}</Typography>
         {displayedResult.is_valid && displayedResult.reconciled_at && <Typography variant="body2" color="text.secondary" mt={0.5}>Reconciled {formatDateTime(displayedResult.reconciled_at)}</Typography>}
-        {!displayedResult.is_valid && <><Typography variant="body2" color="text.secondary" mt={0.5}>Check for missing, duplicate, incorrectly dated, or incorrectly posted transactions. MG5 will not create an automatic balancing adjustment.</Typography><Button component={Link} href="/dashboard/transactions" sx={{ mt: 1 }}>Review transactions</Button></>}
+        {!displayedResult.is_valid && <><Typography variant="body2" color="text.secondary" mt={0.5}>Check for missing, duplicate, incorrectly dated, or incorrectly posted transactions. MG5 will not create an automatic balancing adjustment.</Typography><Button component={Link} href={reviewTransactionsHref} sx={{ mt: 1 }}>Review transactions</Button></>}
       </CardContent></Card>}
 
       <Paper component="section" variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }} aria-labelledby="history-heading">

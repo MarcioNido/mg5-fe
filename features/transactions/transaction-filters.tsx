@@ -22,9 +22,10 @@ type Props = {
   onDraftChange: (draft: Filters) => void;
   onApply: () => void;
   onClear: () => void;
+  lockReconciliationScope?: boolean;
 };
 
-export function TransactionFilters({ accounts, categoryOptions, draft, dateError, onDraftChange, onApply, onClear }: Props) {
+export function TransactionFilters({ accounts, categoryOptions, draft, dateError, onDraftChange, onApply, onClear, lockReconciliationScope = false }: Props) {
   const change = <K extends keyof Filters>(field: K, value: Filters[K]) => onDraftChange({ ...draft, [field]: value });
   const submit = (event: FormEvent) => { event.preventDefault(); onApply(); };
 
@@ -32,7 +33,7 @@ export function TransactionFilters({ accounts, categoryOptions, draft, dateError
     <Box component="form" onSubmit={submit} noValidate>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' }, gap: 2 }}>
         <TextField label="Search" value={draft.search} onChange={(event) => change('search', event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onApply(); } }} inputProps={{ maxLength: 200 }} />
-        <TextField select label="Account" value={draft.accountId} onChange={(event) => change('accountId', event.target.value)}>
+        <TextField select disabled={lockReconciliationScope} label="Account" value={draft.accountId} onChange={(event) => change('accountId', event.target.value)}>
           <MenuItem value="">All accounts</MenuItem>
           {accounts.map((account) => <MenuItem key={account.id} value={String(account.id)}>{account.name}</MenuItem>)}
         </TextField>
@@ -46,8 +47,8 @@ export function TransactionFilters({ accounts, categoryOptions, draft, dateError
           <MenuItem value="">All categories</MenuItem>
           {categoryOptions.map((option) => <MenuItem key={option.id} value={String(option.id)}>{option.label}</MenuItem>)}
         </TextField>
-        <TextField label="Date from" type="date" value={draft.dateFrom} onChange={(event) => change('dateFrom', event.target.value)} InputLabelProps={{ shrink: true }} error={Boolean(dateError)} helperText={dateError ?? ' '} />
-        <TextField label="Date to" type="date" value={draft.dateTo} onChange={(event) => change('dateTo', event.target.value)} InputLabelProps={{ shrink: true }} error={Boolean(dateError)} helperText={dateError ?? ' '} />
+        <TextField disabled={lockReconciliationScope} label="Date from" type="date" value={draft.dateFrom} onChange={(event) => change('dateFrom', event.target.value)} InputLabelProps={{ shrink: true }} error={Boolean(dateError)} helperText={dateError ?? ' '} />
+        <TextField disabled={lockReconciliationScope} label="Date to" type="date" value={draft.dateTo} onChange={(event) => change('dateTo', event.target.value)} InputLabelProps={{ shrink: true }} error={Boolean(dateError)} helperText={dateError ?? ' '} />
         <FormControlLabel control={<Checkbox checked={draft.uncategorized} onChange={(event) => onDraftChange({ ...draft, uncategorized: event.target.checked, categoryId: event.target.checked ? '' : draft.categoryId })} />} label="Uncategorized only" />
       </Box>
       <Stack direction="row" spacing={1.5} mt={1}>

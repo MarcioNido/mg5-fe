@@ -10,17 +10,17 @@ vi.mock('@/features/tenants/tenant-context', () => ({ useTenant: () => ({ select
 vi.mock('@/features/accounts/use-accounts', () => ({ useAccounts: () => ({ accounts: mocks.accounts, loading: false, error: null, retry: vi.fn() }) }));
 vi.mock('@/features/transactions/use-categories', () => ({ useCategories: () => ({ categories: [], loading: false, error: null, retry: vi.fn() }) }));
 vi.mock('@/features/transactions/service', () => ({ listTransactions: mocks.list }));
-vi.mock('@/features/transactions/transaction-list', () => ({ TransactionList: ({ items }: { items: Array<{ description: string }> }) => <div>{items.map((item) => item.description)}</div> }));
+vi.mock('@/features/transactions/transaction-list', () => ({ TransactionList: ({ items, reviewedIds, onReviewedChange }: { items: Array<{ id: number; description: string }>; reviewedIds?: ReadonlySet<number>; onReviewedChange?: (id: number, checked: boolean) => void }) => <div>{items.map((item) => <label key={item.id}>{item.description}{onReviewedChange && <input aria-label={`Checked against statement: ${item.description}`} type="checkbox" checked={reviewedIds?.has(item.id) ?? false} onChange={(event) => onReviewedChange(item.id, event.target.checked)} />}</label>)}</div> }));
 vi.mock('@/features/transactions/transaction-form-dialog', () => ({ TransactionFormDialog: () => <div role="dialog">Transaction form</div> }));
 
-import { TransactionsView } from '@/features/transactions/transactions-view';
+import { transactionViewContextFromQuery, TransactionsView } from '@/features/transactions/transactions-view';
 import { ApiError } from '@/lib/api/error';
 
 const meta = { current_page: 1, from: null, last_page: 1, links: [], path: '', per_page: 25, to: null, total: 0 };
 async function flush() { await act(async () => { await Promise.resolve(); await Promise.resolve(); }); }
 
 describe('transactions view states and tenant boundary', () => {
-  beforeEach(() => { mocks.slug = 'personal'; mocks.accounts = [{ id: 4, name: 'Account', type: 'chequing', account_number: null, currency: 'CAD', opening_balance: '0', opening_balance_date: null }]; mocks.list.mockResolvedValue({ data: [], links: {}, meta }); });
+  beforeEach(() => { sessionStorage.clear(); mocks.slug = 'personal'; mocks.accounts = [{ id: 4, name: 'Account', type: 'chequing', account_number: null, currency: 'CAD', opening_balance: '0', opening_balance_date: null }]; mocks.list.mockResolvedValue({ data: [], links: {}, meta }); });
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('shows loading and then the unfiltered empty state with total', async () => {
@@ -52,6 +52,38 @@ describe('transactions view states and tenant boundary', () => {
     expect(screen.getByText(/Reviewing uncategorized transactions/)).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Exit review' })); await flush();
     expect(mocks.list).toHaveBeenLastCalledWith('personal', expect.objectContaining({ uncategorized: false }), expect.any(AbortSignal));
+  });
+
+  it('loads a reconciliation scope from the URL and keeps temporary checks across pagination visits', async () => {
+    const query = { review: 'reconciliation', account_id: '4', status: 'posted', date_from: '2026-08-01', date_to: '2026-08-24' };
+    mocks.list.mockResolvedValue({ data: [{ id: 91, description: 'BANK ROW' }], links: {}, meta: { ...meta, from: 1, to: 1, total: 1 } });
+    const view = render(<TransactionsView query={query} />); await flush();
+
+    expect(mocks.list).toHaveBeenLastCalledWith('personal', expect.objectContaining({ accountId: '4', status: 'posted', dateFrom: '2026-08-01', dateTo: '2026-08-24' }), expect.any(AbortSignal));
+    expect(screen.getByText('Statement reconciliation review')).toBeVisible();
+    expect(screen.getByText(/Aug 1, 2026.*Aug 24, 2026/)).toBeVisible();
+    expect(screen.getByRole('combobox', { name: 'Account' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Date from')).toBeDisabled();
+    expect(screen.getByLabelText('Date to')).toBeDisabled();
+
+    const check = screen.getByRole('checkbox', { name: 'Checked against statement: BANK ROW' });
+    fireEvent.click(check);
+    expect(check).toBeChecked();
+    expect(screen.getByText('1 of 1 checked')).toBeVisible();
+
+    view.unmount();
+    render(<TransactionsView query={query} />); await flush();
+    expect(screen.getByRole('checkbox', { name: 'Checked against statement: BANK ROW' })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear checks' }));
+    expect(screen.getByRole('checkbox', { name: 'Checked against statement: BANK ROW' })).not.toBeChecked();
+  });
+
+  it('sanitizes transaction review query parameters', () => {
+    expect(transactionViewContextFromQuery({ review: 'reconciliation', account_id: '4', status: 'posted', date_from: '2026-08-01', date_to: '2026-08-24' })).toEqual(expect.objectContaining({
+      filters: expect.objectContaining({ accountId: '4', status: 'posted', dateFrom: '2026-08-01', dateTo: '2026-08-24' }),
+      review: { accountId: '4', dateFrom: '2026-08-01', dateTo: '2026-08-24' },
+    }));
+    expect(transactionViewContextFromQuery({ review: 'reconciliation', account_id: '../4', date_from: '2026-09-01', date_to: '2026-08-24' })).toEqual(expect.objectContaining({ review: null }));
   });
 
   it('applies Search on Enter, validates dates, and clears filters', async () => {
