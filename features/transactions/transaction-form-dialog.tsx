@@ -72,10 +72,11 @@ export function TransactionFormDialog({ open, transaction, tenantSlug, accounts,
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [resolvingDuplicate, setResolvingDuplicate] = useState(false);
   const descriptionRef = useRef<HTMLInputElement>(null);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
   const bankEditable = !transaction || transaction.bank_fields_editable;
-  const busy = submitting || deleting;
+  const busy = submitting || deleting || resolvingDuplicate;
   const fieldError = (field: string) => errors[field]?.[0];
 
   const requestClose = () => {
@@ -148,10 +149,26 @@ export function TransactionFormDialog({ open, transaction, tenantSlug, accounts,
     } finally { setDeleting(false); }
   };
 
+  const toggleIgnored = async () => {
+    if (!transaction?.can_ignore) return;
+    const nextIgnored = !transaction.is_ignored;
+    if (nextIgnored && !window.confirm('Ignore this imported transaction as a duplicate? It will stop affecting balances, reports, and reconciliation, but it will remain visible and can be restored.')) return;
+    setResolvingDuplicate(true); setGeneralError(null);
+    try {
+      await updateTransaction(tenantSlug, transaction.id, { ignored: nextIgnored });
+      onSaved(nextIgnored ? 'Duplicate transaction ignored.' : 'Transaction restored.');
+      onClose();
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 422) setErrors(reason.validationErrors ?? {});
+      setGeneralError(messageFromError(reason, nextIgnored ? 'Unable to ignore this transaction.' : 'Unable to restore this transaction.'));
+    } finally { setResolvingDuplicate(false); }
+  };
+
   return <Dialog open={open} onClose={(_, reason) => { if (reason !== 'backdropClick') requestClose(); }} fullWidth maxWidth="md" aria-labelledby="transaction-form-title" TransitionProps={{ onEntered: () => descriptionRef.current?.focus() }}>
     <DialogTitle id="transaction-form-title">{transaction ? 'Edit transaction' : 'Add transaction'}</DialogTitle>
     <DialogContent><Stack spacing={2.5} pt={1}>
       {generalError && <Alert severity="error">{generalError}</Alert>}
+      {transaction?.is_ignored && <Alert severity="warning">This imported transaction is ignored as a duplicate. It remains visible for audit purposes but does not affect balances, reports, rules, or reconciliation.</Alert>}
       {!bankEditable && <Alert severity="info">Bank details came from or were confirmed by an import, so account, date, amount, and status are locked. Description, notes, and categorization remain editable.</Alert>}
       <TextField select required disabled={!bankEditable} label="Account" value={form.accountId} onChange={(event) => change('accountId', event.target.value)} error={Boolean(fieldError('account_id'))} helperText={fieldError('account_id')}>
         {accounts.map((account) => <MenuItem key={account.id} value={String(account.id)}>{account.name}</MenuItem>)}
@@ -167,10 +184,11 @@ export function TransactionFormDialog({ open, transaction, tenantSlug, accounts,
       </TextField>
       <FormControl error={Boolean(fieldError('category_id'))}><FormLabel>Categorization</FormLabel><RadioGroup row value={form.mode} onChange={(event) => change('mode', event.target.value as CategorizationMode)}><FormControlLabel value="single" control={<Radio />} label="Single category" /><FormControlLabel value="split" control={<Radio />} label="Split into categories" disabled={categoryOptions.length === 0} /></RadioGroup>{fieldError('category_id') && <FormHelperText>{fieldError('category_id')}</FormHelperText>}</FormControl>
       {form.mode === 'single' ? <TextField select label="Category" value={form.categoryId} onChange={(event) => change('categoryId', event.target.value)} helperText="Choose Uncategorized to leave this as a management follow-up."><MenuItem value="">Uncategorized</MenuItem>{categoryOptions.map((option) => <MenuItem key={option.id} value={String(option.id)}>{option.label}</MenuItem>)}</TextField> : <SplitEditor amount={form.amount} rows={form.splits} options={categoryOptions} errors={errors} onChange={(splits) => change('splits', splits)} />}
-      {transaction && !transaction.deletable && <Alert severity="info">This transaction is linked to an import and cannot be deleted directly.</Alert>}
+      {transaction && !transaction.deletable && <Alert severity="info">This transaction is linked to an import and cannot be deleted directly. If it is a duplicate, ignore it instead.</Alert>}
     </Stack></DialogContent>
-    <DialogActions sx={{ p: 3, justifyContent: transaction?.deletable ? 'space-between' : 'flex-end' }}>
+    <DialogActions sx={{ p: 3, justifyContent: transaction?.deletable || transaction?.can_ignore ? 'space-between' : 'flex-end' }}>
       {transaction?.deletable && <Button color="error" onClick={remove} disabled={busy}>{deleting ? 'Deleting…' : 'Delete transaction'}</Button>}
+      {transaction?.can_ignore && <Button color={transaction.is_ignored ? 'success' : 'warning'} onClick={toggleIgnored} disabled={busy}>{resolvingDuplicate ? (transaction.is_ignored ? 'Restoring…' : 'Ignoring…') : (transaction.is_ignored ? 'Restore transaction' : 'Ignore as duplicate')}</Button>}
       <Stack direction="row" spacing={1}><Button color="inherit" onClick={requestClose} disabled={busy}>Cancel</Button><Button variant="contained" onClick={submit} disabled={busy || accounts.length === 0 || (form.mode === 'split' && categoryOptions.length === 0)} startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : undefined}>{submitting ? 'Saving…' : 'Save transaction'}</Button></Stack>
     </DialogActions>
   </Dialog>;

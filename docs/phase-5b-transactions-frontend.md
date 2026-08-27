@@ -32,6 +32,8 @@ Desktop uses a compact, accessibly named table. Mobile uses cards rather than ho
 
 Pending means expected activity that does not affect confirmed bank cash. Posted means manually confirmed activity that affects confirmed bank cash. A direct category displays its complete hierarchy; split transactions display their split count; no direct category and no splits displays Uncategorized. Uncategorized is a management follow-up, not a bank error.
 
+An imported transaction ignored as a duplicate remains in the list with an explicit Ignored chip, muted presentation, and struck amount. Its original Posted status and Imported origin remain visible because ignoring is an independent, reversible financial exclusion rather than a rewritten bank status.
+
 The view includes initial loading, retryable failure, unfiltered and filtered empty states, total count, accessible pagination, mutation refresh, and success feedback. Deleting the last item on a later page returns to the previous page. No optimistic update or client financial aggregation is used.
 
 ## Creation, editing, and imported fields
@@ -54,6 +56,8 @@ Decimal validation accepts signed values with up to four fractional digits. Calc
 
 Delete is available only when `deletable=true`. Confirmation identifies the transaction using its description, civil date, and decimal amount. The UI waits for the 204 response, closes, refreshes, and reports success. Import-linked transactions explain why direct deletion is unavailable. A server-side 422 capability race remains visible.
 
+When `can_ignore=true`, the dialog instead offers “Ignore as duplicate.” Confirmation explains that the import record remains visible but stops affecting balances, reports, rules, and reconciliation. An ignored row offers “Restore transaction” without destructive confirmation. Both actions wait for PATCH, close, refresh the list, and report success.
+
 ## Tenant invalidation and auxiliary data
 
 The inner view is keyed by tenant slug. Switching Personal/Clinic immediately removes transactions, page/filter state, selection, dialog, drafts, notices, and errors from the old tenant. All reads are aborted on cleanup, while the central request-generation boundary also rejects late responses.
@@ -68,7 +72,7 @@ Loading indicators, tables, mobile lists, edit controls, pagination, feedback, v
 
 ## Tests
 
-Focused Vitest coverage includes flat/empty query parameters, tenant headers, POST/PATCH/DELETE/204, decimal-string payloads, Imported origin presentation, hierarchical categories, exact positive/negative/four-place split arithmetic, 0.0001 mismatch, date-only fallback and Toronto today, desktop/mobile transaction presentation, category/split/uncategorized labels, pending creation defaults, imported PATCH field omission, dirty dismissal, conditional deletion, loading/error/empty/total states, Review uncategorized, Search Enter, date validation, filter clearing, and tenant remount/late-response protection.
+Focused Vitest coverage includes flat/empty query parameters, tenant headers, POST/PATCH/DELETE/204, decimal-string payloads, Imported and Ignored presentation, reversible duplicate resolution, hierarchical categories, exact positive/negative/four-place split arithmetic, 0.0001 mismatch, date-only fallback and Toronto today, desktop/mobile transaction presentation, category/split/uncategorized labels, pending creation defaults, imported PATCH field omission, dirty dismissal, conditional deletion, loading/error/empty/total states, Review uncategorized, Search Enter, date validation, filter clearing, and tenant remount/late-response protection.
 
 ## Limitations and Phase 5C handoff
 

@@ -27,9 +27,9 @@ const options = buildCategoryOptions(categories);
 const transaction: Transaction = {
   id: 91, account_id: 4, account: { id: 4, name: account.name, type: account.type, currency: 'CAD' },
   transaction_date: '2026-08-20', amount: '-125.4000', description: 'MEDICAL SUPPLIES', notes: 'Reviewed', status: 'posted', origin: 'csv', posted_at: '2026-08-20T14:12:00Z',
-  category_id: 2, category: child, splits: [], is_import_linked: true, bank_fields_editable: false, deletable: false,
+  ignored_at: null, is_ignored: false, category_id: 2, category: child, splits: [], is_import_linked: true, bank_fields_editable: false, deletable: false, can_ignore: true,
 };
-const editableTransaction: Transaction = { ...transaction, origin: 'manual', is_import_linked: false, bank_fields_editable: true, deletable: true };
+const editableTransaction: Transaction = { ...transaction, origin: 'manual', is_import_linked: false, bank_fields_editable: true, deletable: true, can_ignore: false };
 const splitTransaction: Transaction = {
   ...editableTransaction,
   category_id: null,
@@ -256,5 +256,29 @@ describe('transaction presentation and form', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete transaction' }));
     await waitFor(() => expect(mutations.remove).toHaveBeenCalledWith('personal', 91));
     expect(saved).toHaveBeenCalledWith('Transaction deleted.');
+  });
+
+  it('ignores an imported duplicate after confirmation and offers a reversible restore action', async () => {
+    const saved = vi.fn();
+    const close = vi.fn();
+    const { rerender } = render(<TransactionFormDialog open transaction={transaction} tenantSlug="personal" accounts={[account]} categoryOptions={options} onClose={close} onSaved={saved} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ignore as duplicate' }));
+    await waitFor(() => expect(mutations.update).toHaveBeenCalledWith('personal', 91, { ignored: true }));
+    expect(saved).toHaveBeenCalledWith('Duplicate transaction ignored.');
+
+    vi.clearAllMocks();
+    const ignored = { ...transaction, ignored_at: '2026-08-26T12:00:00Z', is_ignored: true };
+    rerender(<TransactionFormDialog open transaction={ignored} tenantSlug="personal" accounts={[account]} categoryOptions={options} onClose={close} onSaved={saved} />);
+    expect(screen.getByText(/does not affect balances, reports, rules, or reconciliation/i)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Restore transaction' }));
+    await waitFor(() => expect(mutations.update).toHaveBeenCalledWith('personal', 91, { ignored: false }));
+    expect(window.confirm).not.toHaveBeenCalled();
+  });
+
+  it('marks ignored transactions in lists and disables their reconciliation checkbox', () => {
+    const ignored = { ...transaction, ignored_at: '2026-08-26T12:00:00Z', is_ignored: true };
+    render(<TransactionList items={[ignored]} categories={categories} onEdit={vi.fn()} reviewedIds={new Set()} onReviewedChange={vi.fn()} />);
+    expect(screen.getAllByText('Ignored').length).toBeGreaterThan(0);
+    screen.getAllByLabelText(`Checked against statement: ${ignored.description}`).forEach((checkbox) => expect(checkbox).toBeDisabled());
   });
 });

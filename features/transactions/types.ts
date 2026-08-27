@@ -30,12 +30,15 @@ export type Transaction = {
   status: TransactionStatus;
   origin: TransactionOrigin;
   posted_at: string | null;
+  ignored_at: string | null;
+  is_ignored: boolean;
   category_id: number | null;
   category: Category | null;
   splits: TransactionSplit[];
   is_import_linked: boolean;
   bank_fields_editable: boolean;
   deletable: boolean;
+  can_ignore: boolean;
 };
 
 export type PaginationLink = { url: string | null; label: string; active: boolean };
@@ -86,7 +89,7 @@ export type CreateTransactionInput = {
   splits: Array<Omit<TransactionSplitInput, 'category_id'> & { category_id: number }>;
 };
 
-export type UpdateTransactionInput = Partial<CreateTransactionInput>;
+export type UpdateTransactionInput = Partial<CreateTransactionInput> & { ignored?: boolean };
 export type TransactionsResponse = LaravelPaginatedResponse<Transaction>;
 export type TransactionResponse = { data: Transaction };
 export type CategoriesResponse = { data: Category[] };
