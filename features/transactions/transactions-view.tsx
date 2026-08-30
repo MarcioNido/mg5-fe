@@ -23,7 +23,8 @@ import { isAbortError, messageFromError } from '@/lib/api/ui-error';
 import { formatDateOnly } from '@/lib/format/date';
 
 import { buildCategoryOptions } from './category-options';
-import { listTransactions } from './service';
+import { BulkCategoryToolbar } from './bulk-category-toolbar';
+import { bulkCategorizeTransactions, listTransactions } from './service';
 import { TransactionFilters } from './transaction-filters';
 import { TransactionFormDialog } from './transaction-form-dialog';
 import { TransactionList } from './transaction-list';
@@ -92,6 +93,9 @@ function TransactionsTenantView({ tenantSlug, initialFilters, reviewContext }: {
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [reviewedIds, setReviewedIds] = useState<Set<number>>(new Set());
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const reviewStorageKey = tenantSlug && reviewContext
     ? `mg5:reconciliation-review:${tenantSlug}:${reviewContext.accountId}:${reviewContext.dateFrom || 'start'}:${reviewContext.dateTo}`
     : null;
@@ -121,25 +125,66 @@ function TransactionsTenantView({ tenantSlug, initialFilters, reviewContext }: {
   }, [tenantSlug, applied, attempt]);
 
   const refresh = useCallback(() => setAttempt((value) => value + 1), []);
-  const clear = () => { setDateError(null); setDraft(initialFilters); setApplied(initialFilters); };
+  const clearBulkSelection = () => { setBulkSelectedIds(new Set()); setBulkError(null); };
+  const clear = () => { setDateError(null); clearBulkSelection(); setDraft(initialFilters); setApplied(initialFilters); };
   const apply = () => {
     if (draft.dateFrom && draft.dateTo && draft.dateTo < draft.dateFrom) { setDateError('Date to must be on or after Date from.'); return; }
     setDateError(null);
+    clearBulkSelection();
     const next = { ...draft, page: 1, search: draft.search.trim() };
     setDraft(next); setApplied(next);
   };
   const reviewUncategorized = () => {
     const next = { ...initialTransactionFilters, uncategorized: true };
-    setDateError(null); setDraft(next); setApplied(next);
+    setDateError(null); clearBulkSelection(); setDraft(next); setApplied(next);
   };
   const openCreate = () => { setSelected(null); setFormOpen(true); };
   const openEdit = (transaction: Transaction) => { setSelected(transaction); setFormOpen(true); };
   const mutationSaved = (message: string) => {
     setNotice(message);
+    clearBulkSelection();
     if (message === 'Transaction deleted.' && items.length === 1 && applied.page > 1) {
       const next = { ...applied, page: applied.page - 1 };
       setApplied(next); setDraft((current) => ({ ...current, page: next.page }));
     } else refresh();
+  };
+  const markBulkSelected = (transactionId: number, checked: boolean) => {
+    if (checked && !bulkSelectedIds.has(transactionId) && bulkSelectedIds.size >= 200) {
+      setBulkError('You can categorize up to 200 transactions at a time.');
+      return;
+    }
+    setBulkError(null);
+    setBulkSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(transactionId); else next.delete(transactionId);
+      return next;
+    });
+  };
+  const markBulkPage = (transactionIds: number[], checked: boolean) => {
+    const additions = transactionIds.filter((id) => !bulkSelectedIds.has(id));
+    if (checked && bulkSelectedIds.size + additions.length > 200) {
+      setBulkError('You can categorize up to 200 transactions at a time.');
+      return;
+    }
+    setBulkError(null);
+    setBulkSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) additions.forEach((id) => next.add(id)); else transactionIds.forEach((id) => next.delete(id));
+      return next;
+    });
+  };
+  const applyBulkCategory = async (categoryId: number, categoryLabel: string) => {
+    if (!tenantSlug || bulkSelectedIds.size === 0) return;
+    if (!window.confirm(`Apply ${categoryLabel} to ${bulkSelectedIds.size} selected transactions? Existing single categories will be replaced.`)) return;
+    setBulkBusy(true); setBulkError(null);
+    try {
+      const response = await bulkCategorizeTransactions(tenantSlug, { transaction_ids: [...bulkSelectedIds], category_id: categoryId });
+      setNotice(`${response.data.updated_count} ${response.data.updated_count === 1 ? 'transaction' : 'transactions'} categorized as ${categoryLabel}.`);
+      clearBulkSelection();
+      refresh();
+    } catch (reason) {
+      setBulkError(messageFromError(reason, 'Unable to categorize the selected transactions.'));
+    } finally { setBulkBusy(false); }
   };
   const markReviewed = (transactionId: number, checked: boolean) => {
     setReviewedIds((current) => {
@@ -184,10 +229,12 @@ function TransactionsTenantView({ tenantSlug, initialFilters, reviewContext }: {
 
     <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}><TransactionFilters accounts={accounts} categoryOptions={categoryOptions} draft={draft} dateError={dateError} onDraftChange={setDraft} onApply={apply} onClear={clear} lockReconciliationScope={Boolean(reviewContext)} /></Paper>
 
+    {!reviewContext && bulkSelectedIds.size > 0 && <BulkCategoryToolbar selectedCount={bulkSelectedIds.size} categoryOptions={categoryOptions} busy={bulkBusy} error={bulkError} onApply={applyBulkCategory} onClear={clearBulkSelection} />}
+
     {error && <Alert severity="error" action={<Button color="inherit" onClick={refresh}>Retry</Button>}>{error}</Alert>}
     {loading && <Stack alignItems="center" py={8}><CircularProgress aria-label="Loading transactions" /></Stack>}
     {!loading && !error && tenantSlug && items.length === 0 && <Card variant="outlined"><CardContent><Stack alignItems="center" textAlign="center" py={6} spacing={1.5}><ReceiptLongRounded color="disabled" sx={{ fontSize: 48 }} /><Typography variant="h6">{hasFilters(applied) ? 'No transactions match these filters' : 'No transactions yet'}</Typography><Typography color="text.secondary">{hasFilters(applied) ? 'Try clearing or changing the active filters.' : 'Import a bank statement or add a manual transaction.'}</Typography>{hasFilters(applied) ? <Button onClick={clear}>Clear filters</Button> : <Button variant="contained" startIcon={<AddRounded />} onClick={openCreate} disabled={accounts.length === 0}>Add transaction</Button>}</Stack></CardContent></Card>}
-    {!loading && !error && items.length > 0 && <TransactionList items={items} categories={categories} onEdit={openEdit} reviewedIds={reviewContext ? reviewedIds : undefined} onReviewedChange={reviewContext ? markReviewed : undefined} />}
+    {!loading && !error && items.length > 0 && <TransactionList items={items} categories={categories} onEdit={openEdit} reviewedIds={reviewContext ? reviewedIds : undefined} onReviewedChange={reviewContext ? markReviewed : undefined} bulkSelectedIds={!reviewContext ? bulkSelectedIds : undefined} onBulkSelectionChange={!reviewContext ? markBulkSelected : undefined} onBulkPageSelectionChange={!reviewContext ? markBulkPage : undefined} />}
     {!loading && !error && meta && meta.last_page > 1 && <Stack alignItems="center"><Pagination aria-label="Transaction pages" page={meta.current_page} count={meta.last_page} onChange={(_, page) => { const next = { ...applied, page }; setApplied(next); setDraft((current) => ({ ...current, page })); }} /></Stack>}
 
     {formOpen && tenantSlug && <TransactionFormDialog key={`${tenantSlug}-${selected?.id ?? 'new'}`} open transaction={selected} tenantSlug={tenantSlug} accounts={accounts} categoryOptions={categoryOptions} onClose={() => { setFormOpen(false); setSelected(null); }} onSaved={mutationSaved} />}

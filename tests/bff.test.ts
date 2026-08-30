@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DELETE, GET, POST } from '@/app/api/[...path]/route';
+import { DELETE, GET, PATCH, POST } from '@/app/api/[...path]/route';
 
 describe('server-side API bridge', () => {
   afterEach(() => {
@@ -204,5 +204,37 @@ describe('server-side API bridge', () => {
     expect(headers.get('X-Tenant-Slug')).toBe('personal');
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ data: { statement_date: '2026-08-25', calculated_balance: '1250.4000' } });
+  });
+
+  it('allows and forwards tenant-aware bulk transaction categorization', async () => {
+    process.env.MG5_API_URL = 'http://backend.test';
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { updated_count: 2 } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const body = JSON.stringify({ transaction_ids: [91, 92], category_id: 8 });
+    const request = new NextRequest('http://localhost:8081/api/transactions/bulk-category', {
+      method: 'PATCH',
+      headers: {
+        cookie: 'mg5_session=sensitive-token',
+        'Content-Type': 'application/json',
+        'X-Tenant-Slug': 'clinic',
+        Origin: 'http://localhost:8081',
+        'Sec-Fetch-Site': 'same-origin',
+      },
+      body,
+    });
+
+    const response = await PATCH(request, { params: Promise.resolve({ path: ['transactions', 'bulk-category'] }) });
+    const forwarded = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const headers = forwarded.headers as Headers;
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://backend.test/api/transactions/bulk-category');
+    expect(forwarded.method).toBe('PATCH');
+    expect(new TextDecoder().decode(forwarded.body as ArrayBuffer)).toBe(body);
+    expect(headers.get('Authorization')).toBe('Bearer sensitive-token');
+    expect(headers.get('X-Tenant-Slug')).toBe('clinic');
+    expect(response.status).toBe(200);
   });
 });

@@ -281,4 +281,19 @@ describe('transaction presentation and form', () => {
     expect(screen.getAllByText('Ignored').length).toBeGreaterThan(0);
     screen.getAllByLabelText(`Checked against statement: ${ignored.description}`).forEach((checkbox) => expect(checkbox).toBeDisabled());
   });
+
+  it('supports page and row bulk selection while excluding split and ignored transactions', () => {
+    const onChange = vi.fn();
+    const onPageChange = vi.fn();
+    const plain = { ...transaction, id: 92, description: 'PATIENT DEPOSIT', category_id: null, category: null };
+    const ignored = { ...plain, id: 93, description: 'IGNORED DEPOSIT', ignored_at: '2026-08-26T12:00:00Z', is_ignored: true };
+    render(<TransactionList items={[plain, splitTransaction, ignored]} categories={categories} onEdit={vi.fn()} bulkSelectedIds={new Set()} onBulkSelectionChange={onChange} onBulkPageSelectionChange={onPageChange} />);
+
+    fireEvent.click(screen.getAllByRole('checkbox', { name: 'Select all eligible transactions on this page', hidden: true })[0]!);
+    expect(onPageChange).toHaveBeenCalledWith([92], true);
+    fireEvent.click(screen.getAllByRole('checkbox', { name: 'Select transaction: PATIENT DEPOSIT', hidden: true })[0]!);
+    expect(onChange).toHaveBeenCalledWith(92, true);
+    screen.getAllByRole('checkbox', { name: 'Select transaction: MEDICAL SUPPLIES', hidden: true }).forEach((checkbox) => expect(checkbox).toBeDisabled());
+    screen.getAllByRole('checkbox', { name: 'Select transaction: IGNORED DEPOSIT', hidden: true }).forEach((checkbox) => expect(checkbox).toBeDisabled());
+  });
 });

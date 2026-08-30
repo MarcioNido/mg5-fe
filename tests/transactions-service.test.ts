@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createTransaction, deleteTransaction, updateTransaction } from '@/features/transactions/service';
+import { bulkCategorizeTransactions, createTransaction, deleteTransaction, updateTransaction } from '@/features/transactions/service';
 
 const input = { account_id: 4, transaction_date: '2026-08-20', amount: '-42.7500', description: 'Expense', notes: null, status: 'pending' as const, category_id: null, splits: [] };
 
@@ -26,6 +26,16 @@ describe('transaction mutations service', () => {
     await expect(deleteTransaction('clinic', 91)).resolves.toBeUndefined();
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/transactions/91');
     expect((fetchMock.mock.calls[0]?.[1] as RequestInit).method).toBe('DELETE');
+    expect(((fetchMock.mock.calls[0]?.[1] as RequestInit).headers as Headers).get('X-Tenant-Slug')).toBe('clinic');
+  });
+
+  it('sends an exact tenant-aware bulk category PATCH', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { updated_count: 2, category: {} } }), { headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await bulkCategorizeTransactions('clinic', { transaction_ids: [91, 92], category_id: 8 });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/transactions/bulk-category');
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).method).toBe('PATCH');
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).body).toBe(JSON.stringify({ transaction_ids: [91, 92], category_id: 8 }));
     expect(((fetchMock.mock.calls[0]?.[1] as RequestInit).headers as Headers).get('X-Tenant-Slug')).toBe('clinic');
   });
 });

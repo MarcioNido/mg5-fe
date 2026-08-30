@@ -17,7 +17,7 @@ const tenantPathPatterns = [
   /^files(?:\/\d+)?$/,
   /^match-suggestions(?:\/\d+\/(?:confirm|reject))?$/,
   /^rules(?:\/\d+)?$/,
-  /^transactions(?:\/\d+|\/(?:income|expense|balance)\/\d+\/\d+)?$/,
+  /^transactions(?:\/bulk-category|\/\d+|\/(?:income|expense|balance)\/\d+\/\d+)?$/,
 ];
 
 const mutationMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);

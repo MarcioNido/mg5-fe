@@ -1,16 +1,18 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   slug: 'personal' as string | null,
   list: vi.fn(),
+  bulk: vi.fn(),
+  categories: [] as Array<{ id: number; name: string; type: 'income' | 'expense' | 'transfer'; level: number; parent: null }>,
   accounts: [{ id: 4, name: 'Account', type: 'chequing', account_number: null, currency: 'CAD', opening_balance: '0', opening_balance_date: null }],
 }));
 vi.mock('@/features/tenants/tenant-context', () => ({ useTenant: () => ({ selectedSlug: mocks.slug }) }));
 vi.mock('@/features/accounts/use-accounts', () => ({ useAccounts: () => ({ accounts: mocks.accounts, loading: false, error: null, retry: vi.fn() }) }));
-vi.mock('@/features/transactions/use-categories', () => ({ useCategories: () => ({ categories: [], loading: false, error: null, retry: vi.fn() }) }));
-vi.mock('@/features/transactions/service', () => ({ listTransactions: mocks.list }));
-vi.mock('@/features/transactions/transaction-list', () => ({ TransactionList: ({ items, reviewedIds, onReviewedChange }: { items: Array<{ id: number; description: string }>; reviewedIds?: ReadonlySet<number>; onReviewedChange?: (id: number, checked: boolean) => void }) => <div>{items.map((item) => <label key={item.id}>{item.description}{onReviewedChange && <input aria-label={`Checked against statement: ${item.description}`} type="checkbox" checked={reviewedIds?.has(item.id) ?? false} onChange={(event) => onReviewedChange(item.id, event.target.checked)} />}</label>)}</div> }));
+vi.mock('@/features/transactions/use-categories', () => ({ useCategories: () => ({ categories: mocks.categories, loading: false, error: null, retry: vi.fn() }) }));
+vi.mock('@/features/transactions/service', () => ({ listTransactions: mocks.list, bulkCategorizeTransactions: mocks.bulk }));
+vi.mock('@/features/transactions/transaction-list', () => ({ TransactionList: ({ items, reviewedIds, onReviewedChange, bulkSelectedIds, onBulkSelectionChange }: { items: Array<{ id: number; description: string }>; reviewedIds?: ReadonlySet<number>; onReviewedChange?: (id: number, checked: boolean) => void; bulkSelectedIds?: ReadonlySet<number>; onBulkSelectionChange?: (id: number, checked: boolean) => void }) => <div>{items.map((item) => <label key={item.id}>{item.description}{onReviewedChange && <input aria-label={`Checked against statement: ${item.description}`} type="checkbox" checked={reviewedIds?.has(item.id) ?? false} onChange={(event) => onReviewedChange(item.id, event.target.checked)} />}{onBulkSelectionChange && <input aria-label={`Select transaction: ${item.description}`} type="checkbox" checked={bulkSelectedIds?.has(item.id) ?? false} onChange={(event) => onBulkSelectionChange(item.id, event.target.checked)} />}</label>)}</div> }));
 vi.mock('@/features/transactions/transaction-form-dialog', () => ({ TransactionFormDialog: () => <div role="dialog">Transaction form</div> }));
 
 import { transactionViewContextFromQuery, TransactionsView } from '@/features/transactions/transactions-view';
@@ -20,8 +22,8 @@ const meta = { current_page: 1, from: null, last_page: 1, links: [], path: '', p
 async function flush() { await act(async () => { await Promise.resolve(); await Promise.resolve(); }); }
 
 describe('transactions view states and tenant boundary', () => {
-  beforeEach(() => { sessionStorage.clear(); mocks.slug = 'personal'; mocks.accounts = [{ id: 4, name: 'Account', type: 'chequing', account_number: null, currency: 'CAD', opening_balance: '0', opening_balance_date: null }]; mocks.list.mockResolvedValue({ data: [], links: {}, meta }); });
-  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+  beforeEach(() => { sessionStorage.clear(); mocks.slug = 'personal'; mocks.categories = []; mocks.accounts = [{ id: 4, name: 'Account', type: 'chequing', account_number: null, currency: 'CAD', opening_balance: '0', opening_balance_date: null }]; mocks.list.mockResolvedValue({ data: [], links: {}, meta }); mocks.bulk.mockResolvedValue({ data: { updated_count: 1, category: {} } }); vi.stubGlobal('confirm', vi.fn(() => true)); });
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
   it('shows loading and then the unfiltered empty state with total', async () => {
     let resolve!: (value: unknown) => void; mocks.list.mockReturnValue(new Promise((done) => { resolve = done; }));
@@ -52,6 +54,24 @@ describe('transactions view states and tenant boundary', () => {
     expect(screen.getByText(/Reviewing uncategorized transactions/)).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Exit review' })); await flush();
     expect(mocks.list).toHaveBeenLastCalledWith('personal', expect.objectContaining({ uncategorized: false }), expect.any(AbortSignal));
+  });
+
+  it('selects ordinary transactions and applies one category in bulk', async () => {
+    const category = { id: 8, name: 'Patient services', type: 'income' as const, level: 1, parent: null };
+    mocks.categories = [category];
+    mocks.list.mockResolvedValue({ data: [{ id: 91, description: 'PATIENT DEPOSIT' }], links: {}, meta: { ...meta, from: 1, to: 1, total: 1 } });
+    render(<TransactionsView />); await flush();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select transaction: PATIENT DEPOSIT' }));
+    expect(screen.getByText('1 selected')).toBeVisible();
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Category for selected transactions' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Patient services' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply category' }));
+
+    await waitFor(() => expect(mocks.bulk).toHaveBeenCalledWith('personal', { transaction_ids: [91], category_id: 8 }));
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('Existing single categories will be replaced'));
+    expect(await screen.findByText('1 transaction categorized as Patient services.')).toBeVisible();
+    expect(screen.queryByText('1 selected')).not.toBeInTheDocument();
   });
 
   it('loads a reconciliation scope from the URL and keeps temporary checks across pagination visits', async () => {

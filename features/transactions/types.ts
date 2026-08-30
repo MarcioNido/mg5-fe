@@ -92,6 +92,8 @@ export type CreateTransactionInput = {
 export type UpdateTransactionInput = Partial<CreateTransactionInput> & { ignored?: boolean };
 export type TransactionsResponse = LaravelPaginatedResponse<Transaction>;
 export type TransactionResponse = { data: Transaction };
+export type BulkCategorizeTransactionsInput = { transaction_ids: number[]; category_id: number };
+export type BulkCategorizeTransactionsResponse = { data: { updated_count: number; category: Category } };
 export type CategoriesResponse = { data: Category[] };
 
 export const transactionStatusLabels: Record<TransactionStatus, string> = {

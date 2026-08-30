@@ -20,6 +20,7 @@ The feature consumes:
 - `POST /api/transactions`
 - `PATCH /api/transactions/{id}`
 - `DELETE /api/transactions/{id}`
+- `PATCH /api/transactions/bulk-category`
 - `GET /api/categories`
 
 Every call is tenant-aware and supplies the selected slug. Reads accept an `AbortSignal`. The list sends flat `page`, `per_page`, `account_id`, `status`, `origin`, `category_id`, `uncategorized`, `date_from`, `date_to`, and `search` parameters. Empty filters are omitted, search is trimmed, `per_page` is fixed at 25, and backend ordering is preserved.
@@ -35,6 +36,12 @@ Pending means expected activity that does not affect confirmed bank cash. Posted
 An imported transaction ignored as a duplicate remains in the list with an explicit Ignored chip, muted presentation, and struck amount. Its original Posted status and Imported origin remain visible because ignoring is an independent, reversible financial exclusion rather than a rewritten bank status.
 
 The view includes initial loading, retryable failure, unfiltered and filtered empty states, total count, accessible pagination, mutation refresh, and success feedback. Deleting the last item on a later page returns to the previous page. No optimistic update or client financial aggregation is used.
+
+## Bulk categorization
+
+Outside reconciliation review, desktop rows and mobile cards expose selection checkboxes. The table header and mobile page control select every eligible transaction on the current page. Selection is preserved across pagination, limited to 200 items, and cleared when filters, tenant, or transaction data are intentionally changed. Ignored and split transactions are visibly non-selectable because they require individual handling.
+
+After the first selection, a responsive action bar shows the selected count and hierarchical category picker. Applying requires confirmation that existing direct categories will be replaced, sends one atomic tenant-aware request, then clears the selection, refreshes the list, and reports the exact updated count. A failed request retains both selection and category so it can be reviewed and retried. The reconciliation checklist remains a separate session-local interaction and never shows bulk classification controls.
 
 ## Creation, editing, and imported fields
 
@@ -72,7 +79,7 @@ Loading indicators, tables, mobile lists, edit controls, pagination, feedback, v
 
 ## Tests
 
-Focused Vitest coverage includes flat/empty query parameters, tenant headers, POST/PATCH/DELETE/204, decimal-string payloads, Imported and Ignored presentation, reversible duplicate resolution, hierarchical categories, exact positive/negative/four-place split arithmetic, 0.0001 mismatch, date-only fallback and Toronto today, desktop/mobile transaction presentation, category/split/uncategorized labels, pending creation defaults, imported PATCH field omission, dirty dismissal, conditional deletion, loading/error/empty/total states, Review uncategorized, Search Enter, date validation, filter clearing, and tenant remount/late-response protection.
+Focused Vitest coverage includes flat/empty query parameters, tenant headers, POST/PATCH/DELETE/204, the BFF bulk-route allowlist and body forwarding, decimal-string payloads, Imported and Ignored presentation, reversible duplicate resolution, individual/page bulk selection and exclusions, atomic bulk application, hierarchical categories, exact positive/negative/four-place split arithmetic, 0.0001 mismatch, date-only fallback and Toronto today, desktop/mobile transaction presentation, category/split/uncategorized labels, pending creation defaults, imported PATCH field omission, dirty dismissal, conditional deletion, loading/error/empty/total states, Review uncategorized, Search Enter, date validation, filter clearing, and tenant remount/late-response protection.
 
 ## Limitations and Phase 5C handoff
 

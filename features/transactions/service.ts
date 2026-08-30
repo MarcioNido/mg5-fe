@@ -3,6 +3,8 @@ export { listCategories } from '@/features/categories/service';
 
 import type {
   CreateTransactionInput,
+  BulkCategorizeTransactionsInput,
+  BulkCategorizeTransactionsResponse,
   Transaction,
   TransactionFilters,
   TransactionResponse,
@@ -47,5 +49,11 @@ export function updateTransaction(tenantSlug: string, id: Transaction['id'], inp
 export function deleteTransaction(tenantSlug: string, id: Transaction['id']) {
   return apiRequest<void>(`transactions/${id}`, {
     method: 'DELETE', tenantAware: true, tenantSlug,
+  });
+}
+
+export function bulkCategorizeTransactions(tenantSlug: string, input: BulkCategorizeTransactionsInput) {
+  return apiRequest<BulkCategorizeTransactionsResponse>('transactions/bulk-category', {
+    method: 'PATCH', tenantAware: true, tenantSlug, body: input,
   });
 }
